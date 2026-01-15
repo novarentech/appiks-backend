@@ -1,11 +1,13 @@
-# Appiks.id Backend API - Mental Health Monitoring System
+# Appiks.id Backend - Mental Health Monitoring System
 
 [![Laravel 12](https://img.shields.io/badge/Laravel-12-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)](https://laravel.com)
 [![JWT](https://img.shields.io/badge/Authentication-JWT-000000?style=for-the-badge&logo=json-web-tokens&logoColor=white)](https://jwt.io)
 [![Google Gemini](https://img.shields.io/badge/AI-Google%20Gemini-4285F4?style=for-the-badge&logo=google-gemini&logoColor=white)](https://ai.google.dev/)
 [![Docker](https://img.shields.io/badge/Deployment-Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
 
-Appiks.id is a comprehensive backend solution designed for student mental health monitoring and emotional well-being tracking. This RESTful API serves as the backbone for the Appiks ecosystem, providing secure data management, AI-driven insights, and detailed psychological reporting for educational institutions.
+> **A project by Novaren Tech**
+
+Appiks.id is a comprehensive backend solution developed to help schools foster safety, inclusivity, and emotional well-being among students. This RESTful API serves as the backbone for the Appiks ecosystem, providing secure data management, AI-driven insights, and detailed psychological reporting.
 
 ## 🚀 Key Modules
 
@@ -27,39 +29,12 @@ Appiks.id is a comprehensive backend solution designed for student mental health
 - **Automated Documentation**: Live API documentation powered by **Dedoc Scramble**.
 - **Data Operations**: Bulk user management and record exports via Excel (`maatwebsite/excel`).
 
-## 🛠️ Tech Stack
-
-- **Backend**: Laravel 12 (PHP 8.2+)
-- **Database**: MySQL / PostgreSQL
-- **AI/ML**: Google Gemini PHP SDK
-- **Authentication**: JWT Auth (`tymon/jwt-auth`) & Laravel Sanctum
-- **Documentation**: Scramble (OpenAPI/Swagger)
-- **Deployment**: Docker, Caddy, Supervisor (for Queue/Schedule handling)
-
-## ⚙️ Setup & Development
-
-### Local Requirements
-- PHP 8.2+
-- Composer
-- Docker (optional for containerized setup)
-
-## 🐋 Docker Deployment
-
-The repository includes a production-ready `Dockerfile` and `Caddyfile` configuration.
-
-```bash
-docker build -t appiks-backend .
-docker run -p 8000:80 appiks-backend
-```
-
-## 👨‍💻 Maintainer
-
-**Kamaluddin Arsyad Fadllillah**
-*Fullstack & Backend Developer*
-
-- 📧 [arsyadkamaluddin@gmail.com](mailto:arsyadkamaluddin@gmail.com)
-- 🔗 [LinkedIn](https://linkedin.com/in/arsyadkamaluddin)
-- 🌐 [Portfolio](https://disyfa.space)
-
 ---
-Developed as part of the mission to improve student mental health through technology.
+
+## 🏢 About Novaren Tech
+Novaren Tech is a digital innovation company that turns ideas into scalable, secure, and reliable technology.
+
+- **Website**: [novarentech.com](https://novarentech.com)
+- **Email**: [business@novarentech.com](mailto:business@novarentech.com)
+
+Developed with passion by the Novaren Tech team.
