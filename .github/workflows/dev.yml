@@ -41,5 +41,5 @@ jobs:
           port: ${{ secrets.VPS_1_HOST_PORT }}
           script: |
             cd /media/appiks-dev
-            docker compose up backend -d --force-recreate --pull-always
+            docker compose up backend -d --force-recreate --pull always
             docker compose exec -t backend php artisan migrate:fresh --force --seed
