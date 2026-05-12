@@ -9,6 +9,16 @@
 
 Appiks.id is a comprehensive backend solution developed to help schools foster safety, inclusivity, and emotional well-being among students. This RESTful API serves as the backbone for the Appiks ecosystem, providing secure data management, AI-driven insights, and detailed psychological reporting.
 
+## 🏗 Architecture & Standardization
+
+This project enforces strict architectural guidelines defined in the [Agent Rule of Architect](agent/RULE_OF_ARCHITECT.md). All modifications must adhere to these standards, including:
+- Utilizing **Action Classes** for business logic.
+- Implementing **Laravel Policies** for authorization.
+- Ensuring **Dynamic Pagination** on list endpoints.
+- Enforcing **SoftDeletes** across major tables.
+
+*See `agent/technical-reference.md` for integration details with the Next.js frontend.*
+
 ## 🚀 Key Modules
 
 ### 🧠 Mental Health & Wellness
