@@ -109,9 +109,7 @@ class MoodRecordController extends Controller
     #[Group('Mood Record')]
     public function recapPerMonth(string $month)
     {
-        Gate::allowIf(function (User $user) {
-            return $user->role == UserRole::STUDENT->value;
-        });
+        $this->authorize('recapPerMonth', MoodRecord::class);
         $mood = MoodRecord::where('user_id', Auth::id())->where('recorded', 'like', "$month-__")->orderBy('recorded')->get();
 
         return $this->success(MoodRecordResource::collection($mood));
@@ -125,6 +123,7 @@ class MoodRecordController extends Controller
     #[Group('Mood Record')]
     public function store(MoodRecordSendRequest $request, StoreMoodRecordAction $action)
     {
+        $this->authorize('store', MoodRecord::class);
         $result = $action->handle($request->validated());
 
         return $this->created($result, 'Success record mood');
@@ -138,30 +137,19 @@ class MoodRecordController extends Controller
     #[Group('Mood Record')]
     public function getMoodTrend()
     {
-        Gate::authorize('dashboard-data');
+        $this->authorize('viewSchoolTrend', MoodRecord::class);
 
-        if (Auth::user()->role == UserRole::SUPER->value) {
-            $moods = MoodRecord::selectRaw('MONTH(recorded) as month, status, COUNT(*) as total')
-                ->groupBy('month', 'status')
-                ->orderBy('month')
-                ->get();
-        } else {
-            $students = Auth::user()->school->students->pluck('id');
-            $moods = MoodRecord::whereIn('user_id', $students)->selectRaw('MONTH(recorded) as month, status, COUNT(*) as total')
-                ->groupBy('month', 'status')
-                ->orderBy('month')
-                ->get();
-        }
+        $moods = MoodRecord::selectRaw('MONTH(recorded) as month, status, COUNT(*) as total')
+            ->groupBy('month', 'status')
+            ->orderBy('month')
+            ->get();
 
         // group per bulan
         $grouped = $moods->groupBy('month');
-
         $result = [];
 
         foreach ($grouped as $month => $items) {
-            // ambil status dengan jumlah terbesar
             $top = $items->sortByDesc('total')->first();
-
             $result[$this->monthName($month)] = [
                 'status' => $top->status,
                 'total' => (int) $top->total,
@@ -231,11 +219,7 @@ class MoodRecordController extends Controller
         string $type,
         BuildMoodRecapAction $recapAction
     ) {
-        Gate::allowIf(function (User $authUser) use ($user) {
-            return ($authUser->role == UserRole::COUNSELOR->value && $authUser->id === $user->counselor_id)
-                || ($authUser->role == UserRole::TEACHER->value && $authUser->id === $user->mentor_id)
-                || $authUser->role == UserRole::SUPER->value;
-        });
+        $this->authorize('viewHistory', [MoodRecord::class, $user]);
 
         $query = MoodRecord::where('user_id', $user->id);
 
@@ -275,9 +259,7 @@ class MoodRecordController extends Controller
     #[Group('Mood Record')]
     public function getMoodTrendSchool(Request $request, School $school, string $type)
     {
-        Gate::allowIf(function (User $authUser) {
-            return $authUser->role == UserRole::SUPER->value;
-        });
+        $this->authorize('viewSchoolTrend', MoodRecord::class);
         $query = MoodRecord::whereIn('user_id', $school->students->pluck('id')->toArray());
 
         if ($type === 'monthly') {
@@ -318,15 +300,14 @@ class MoodRecordController extends Controller
     #[Group('Export')]
     public function exportToday()
     {
-        Gate::allowIf(function (User $user) {
-            return in_array($user->role, [UserRole::TEACHER->value, UserRole::COUNSELOR->value]);
-        });
+        $this->authorize('export', MoodRecord::class);
+
         if (Auth::user()->role == UserRole::TEACHER->value) {
-            // code...
             $student = User::whereRole(UserRole::STUDENT->value)->whereMentorId(Auth::id());
         } else {
             $student = User::whereRole(UserRole::STUDENT->value)->whereCounselorId(Auth::id());
         }
+
         $moods = MoodRecord::with(['user', 'user.room'])->whereIn('user_id', $student->pluck('id'))->where('recorded', Carbon::today())->get()->map(function ($mood) {
             return [
                 'name' => $mood->user->name,
@@ -352,10 +333,7 @@ class MoodRecordController extends Controller
     #[Group('Export')]
     public function exportWeekly(string $username, BuildMoodRecapAction $recapAction)
     {
-        Gate::allowIf(fn (User $auth) => in_array($auth->role, [
-            UserRole::TEACHER->value,
-            UserRole::COUNSELOR->value,
-        ]));
+        $this->authorize('export', MoodRecord::class);
 
         $user = User::with(['room', 'counselor', 'mentor'])->whereUsername($username)->first();
         $moods = MoodRecord::where('user_id', $user->id)
@@ -388,10 +366,7 @@ class MoodRecordController extends Controller
     #[Group('Export')]
     public function exportMonthly(string $username, BuildMoodRecapAction $recapAction)
     {
-        Gate::allowIf(fn (User $auth) => in_array($auth->role, [
-            UserRole::TEACHER->value,
-            UserRole::COUNSELOR->value,
-        ]));
+        $this->authorize('export', MoodRecord::class);
 
         $user = User::with(['room', 'counselor', 'mentor'])->whereUsername($username)->first();
         $moods = MoodRecord::where('user_id', $user->id)

@@ -25,6 +25,7 @@ class UpdateArticleRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'tags' => 'nullable|array',
             'tags.*' => 'integer|exists:tags,id',
             'title' => 'required|string|max:255',
             'description' => 'required|string',
@@ -33,16 +34,25 @@ class UpdateArticleRequest extends FormRequest
         ];
     }
 
+    protected function prepareForValidation(): void
+    {
+        $tags = $this->input('tags');
+
+        if (is_array($tags) && isset($tags[0]) && is_string($tags[0])) {
+            $decoded = json_decode($tags[0], true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $this->merge(['tags' => array_map('intval', $decoded)]);
+            }
+        }
+    }
+
     protected function passedValidation()
     {
         $baseSlug = Str::slug($this->title);
-
-        // Ambil 4 karakter random dari UUID
         $uniquePart = substr((string) Str::uuid(), 0, 4);
 
         $this->merge([
             'slug' => $baseSlug.'-'.$uniquePart,
-            'tags' => (array) $this->input('tags', []),
         ]);
     }
 }

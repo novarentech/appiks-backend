@@ -20,33 +20,15 @@ class AuthController extends Controller
      * Mendapatkan JWT token untuk mengakses guarded route
      */
     #[Group('Authentication')]
-    public function login(UserLoginRequest $request)
+    public function login(UserLoginRequest $request, \App\Actions\LoginAction $action)
     {
-        $credentials = $request->validated();
-        $user = User::with(['school', 'room', 'mentor'])->where('username', strtolower($credentials['username']))->first();
-        if (! $user) {
-            return $this->error('Unauthorized', 401, null);
-        }
-        if (! $token = Auth::claims([
-            'name' => $user->name,
-            'username' => $user->username,
-            'identifier' => $user->identifier,
-            'role' => $user->role,
-            'verified' => $user->verified,
-            'room' => $user->room->name ?? null,
-            'mentor' => $user->mentor->name ?? null,
-            'school' => $user->school->name ?? null,
-        ])->attempt($credentials)) {
+        $result = $action->handle($request->validated());
+
+        if (! $result) {
             return $this->error('Unauthorized', 401, null);
         }
 
-        return $this->success([
-            'token' => $token,
-            'expiresIn' => now()
-                ->addMinutes(Auth::factory()->getTTL())
-                ->setTimezone(config('app.timezone'))
-                ->toIso8601String(),
-        ]);
+        return $this->success($result);
     }
 
     /**

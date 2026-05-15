@@ -35,6 +35,8 @@ class ReportController extends Controller
             $reports = $user->report()->with(['counselor', 'user'])->orderBy('date')->get();
         } elseif ($user->role == UserRole::COUNSELOR->value) {
             $reports = Report::with(['counselor', 'user', 'user.room'])->whereIn('user_id', $user->counselored->pluck('id'))->get();
+        } else {
+            $reports = collect();
         }
 
         return $this->success(ReportResource::collection($reports));
@@ -48,6 +50,7 @@ class ReportController extends Controller
     #[Group('Report')]
     public function getReportCount()
     {
+        $this->authorize('viewGraph', Report::class);
         $user = Auth::user();
         $reports = Report::whereCreatedAt(Carbon::today())->whereIn('user_id', $user->counselored->pluck('id'))->get();
 
@@ -92,9 +95,7 @@ class ReportController extends Controller
     #[Group('Report')]
     public function reportOfStudent(User $user)
     {
-        Gate::allowIf(function (User $authUser) use ($user) {
-            return $authUser->role == UserRole::SUPER->value && $user->role == UserRole::STUDENT->value;
-        });
+        $this->authorize('viewStudentReports', [Report::class, $user]);
         $reports = Report::with('counselor')->whereUserId($user->id)->get();
 
         return $this->created(ReportResource::collection($reports));
@@ -157,14 +158,14 @@ class ReportController extends Controller
     #[Group('Dashboard')]
     public function getReportGraph()
     {
-        Gate::authorize('dashboard-data');
+        $this->authorize('viewGraph', Report::class);
         $report = Report::whereIn('user_id', Auth::user()->counselored->pluck('id'))
             ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
             ->groupBy('month')
             ->orderBy('month')
             ->pluck('total', 'month');
 
-        $sharing = Sharing::whereIn('user_id', Auth::user()->counselored->pluck('id'))
+        $sharing = \App\Models\Sharing::whereIn('user_id', Auth::user()->counselored->pluck('id'))
             ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
             ->groupBy('month')
             ->orderBy('month')
@@ -182,9 +183,7 @@ class ReportController extends Controller
     #[Group('Notification')]
     public function latestOfStudent()
     {
-        Gate::allowIf(function (User $user) {
-            return $user->role == UserRole::STUDENT->value;
-        });
+        $this->authorize('viewLatest', Report::class);
         $reports = Report::with(['counselor'])->whereUserId(Auth::id())->latest()->take(2)->get();
 
         return $this->success(ReportResource::collection($reports));

@@ -26,14 +26,13 @@ class SharingController extends Controller
     #[Group('Sharing')]
     public function index()
     {
-        Gate::allowIf(function (User $user) {
-            return in_array($user->role, [UserRole::STUDENT->value, UserRole::COUNSELOR->value]);
-        });
         $user = Auth::user();
         if ($user->role == UserRole::STUDENT->value) {
             $sharings = $user->sharing()->with(['user'])->orderBy('replied_at')->get();
         } elseif ($user->role == UserRole::COUNSELOR->value) {
             $sharings = Sharing::with(['user', 'user.room'])->whereIn('user_id', $user->counselored->pluck('id'))->get();
+        } else {
+            $sharings = collect();
         }
 
         return $this->success(SharingResource::collection($sharings));
@@ -47,9 +46,7 @@ class SharingController extends Controller
     #[Group('Sharing')]
     public function getSharingCount()
     {
-        Gate::allowIf(function (User $user) {
-            return $user->role == UserRole::COUNSELOR->value;
-        });
+        $this->authorize('viewGraph', Sharing::class);
         $user = Auth::user();
         $sharings = Sharing::whereDate('created_at', Carbon::today())
             ->whereIn('user_id', $user->counselored->pluck('id'));
@@ -85,9 +82,7 @@ class SharingController extends Controller
     #[Group('Sharing')]
     public function show(Sharing $sharing)
     {
-        Gate::allowIf(function (User $authUser) use ($sharing) {
-            return $authUser->role == UserRole::SUPER->value || ($authUser->role == UserRole::COUNSELOR->value && $authUser->id === $sharing->user->counselor_id) || ($authUser->role == UserRole::STUDENT->value && $authUser->id === $sharing->user_id);
-        });
+        $this->authorize('view', $sharing);
 
         return $this->success(new SharingResource($sharing));
     }
@@ -100,9 +95,7 @@ class SharingController extends Controller
     #[Group('Sharing')]
     public function sharingOfStudent(User $user)
     {
-        Gate::allowIf(function (User $auth) use ($user) {
-            return $auth->role == UserRole::SUPER->value && $user->role == UserRole::STUDENT->value;
-        });
+        $this->authorize('viewStudentSharing', [Sharing::class, $user]);
         $sharings = Sharing::whereUserId($user->id)->get();
 
         return $this->success(SharingResource::collection($sharings));
@@ -127,9 +120,7 @@ class SharingController extends Controller
     #[Group('Notification')]
     public function latestOfStudent()
     {
-        Gate::allowIf(function (User $user) {
-            return $user->role == UserRole::STUDENT->value;
-        });
+        $this->authorize('create', Sharing::class);
         $sharings = Sharing::whereUserId(Auth::id())->latest()->take(2)->get();
 
         return $this->success(SharingResource::collection($sharings));

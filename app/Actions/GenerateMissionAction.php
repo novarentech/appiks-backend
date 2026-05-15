@@ -13,7 +13,7 @@ class GenerateMissionAction
         $key = implode('', $answers);
         $ans = DB::table('ai_generated')->where('key', $key)->first();
 
-        if ($ans->answer == null) {
+        if (!$ans || $ans->answer == null) {
             $sembilan = [
                 'B' => 'Kamu punya motivasi internal yang sangat kuat! Ini keren sekali karena bahan bakarmu datang dari dalam dirimu sendiri. Terus pertahankan rasa ingin tahu itu.',
                 'D' => 'Kamu punya motivasi internal yang sangat kuat! Ini keren sekali karena bahan bakarmu datang dari dalam dirimu sendiri. Terus pertahankan rasa ingin tahu itu.',
@@ -29,11 +29,14 @@ class GenerateMissionAction
             $ds = $sembilan[$answers[0]];
             $da = $sepuluh[$answers[1]];
             
-            $hasil = $this->gemini->handle("Kombinasikan dua motivasi ini jadi 1 pertama: $ds. kedua: $da. tujukan bagi siswa SMA. Cukup singkat text tanpa formatting apapun. Ini akan menjadi bagian Bahan Bakar siswa (yang mengapresiasi dengan ucapkah terimakasih dan hebat, contoh: kamu punya kombinasi bahan bakar internal dan resilience yang kuat) maksimal 10 kata", 50);
+            $prompt = "Kombinasikan dua motivasi ini menjadi satu teks apresiasi singkat untuk siswa SMA: 1) $ds, 2) $da. Outputkan teks saja maksimal 10 kata.";
+            $hasil = $this->gemini->handle($prompt, 50);
             
             $hasilArr = ['text' => $hasil];
-            DB::table('ai_generated')->where('key', $key)
-                ->update(['answer' => json_encode($hasilArr), 'updated_at' => now()]);
+            DB::table('ai_generated')->updateOrInsert(
+                ['key' => $key],
+                ['answer' => json_encode($hasilArr), 'updated_at' => now()]
+            );
             return $hasil;
         }
 

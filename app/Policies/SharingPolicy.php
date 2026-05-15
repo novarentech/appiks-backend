@@ -13,7 +13,7 @@ class SharingPolicy
      */
     public function view(User $user, Sharing $sharing): bool
     {
-        return false;
+        return $sharing->user_id == $user->id || $sharing->user->counselor_id == $user->id;
     }
 
     /**
@@ -29,6 +29,24 @@ class SharingPolicy
      */
     public function update(User $user, Sharing $sharing): bool
     {
-        return $user->role == 'counselor' && $user->id == $sharing->user->counselor_id;
+        return $user->role == UserRole::COUNSELOR->value && $user->id == $sharing->user->counselor_id;
+    }
+
+    /**
+     * Hanya counselor yang boleh melihat dashboard-data sharing.
+     */
+    public function viewGraph(User $authUser): bool
+    {
+        return $authUser->role === UserRole::COUNSELOR->value
+            || $authUser->role === UserRole::SUPER->value;
+    }
+
+    /**
+     * Hanya Super Admin yang boleh melihat semua sharing milik student tertentu.
+     */
+    public function viewStudentSharing(User $authUser, User $targetUser): bool
+    {
+        return $authUser->role === UserRole::SUPER->value
+            && $targetUser->role === UserRole::STUDENT->value;
     }
 }

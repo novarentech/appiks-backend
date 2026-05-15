@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\UserRole;
 use App\Models\Room;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -18,7 +19,7 @@ class UserSeeder extends Seeder
         $mentor = User::factory()->create([
             'username' => 'guruwali',
             'verified' => true,
-            'role' => 'teacher',
+            'role' => UserRole::TEACHER->value,
             'mentor_id' => null,
             'counselor_id' => null,
             'room_id' => null,
@@ -27,7 +28,7 @@ class UserSeeder extends Seeder
         $counselor = User::factory()->create([
             'username' => 'gurubk',
             'verified' => true,
-            'role' => 'counselor',
+            'role' => UserRole::COUNSELOR->value,
             'mentor_id' => null,
             'room_id' => null,
             'counselor_id' => null,
@@ -38,7 +39,7 @@ class UserSeeder extends Seeder
         User::factory()->create([
             'username' => 'super',
             'verified' => true,
-            'role' => 'super',
+            'role' => UserRole::SUPER->value,
             'counselor_id' => null,
             'mentor_id' => null,
             'room_id' => null,
@@ -47,7 +48,7 @@ class UserSeeder extends Seeder
         User::factory()->create([
             'username' => 'kepsek',
             'verified' => true,
-            'role' => 'headteacher',
+            'role' => UserRole::HEADTEACHER->value,
             'mentor_id' => null,
             'room_id' => null,
             'counselor_id' => null,
@@ -56,7 +57,7 @@ class UserSeeder extends Seeder
         User::factory()->create([
             'username' => 'admintu',
             'verified' => true,
-            'role' => 'admin',
+            'role' => UserRole::ADMIN->value,
             'mentor_id' => null,
             'room_id' => null,
             'counselor_id' => null,
@@ -66,7 +67,7 @@ class UserSeeder extends Seeder
             User::factory()->create([
                 'username' => "siswa{$room->id}active",
                 'verified' => true,
-                'role' => 'student',
+                'role' => UserRole::STUDENT->value,
                 'mentor_id' => $men,
                 'room_id' => $room->id,
                 'counselor_id' => $con,
@@ -75,7 +76,7 @@ class UserSeeder extends Seeder
             User::factory()->create([
                 'username' => "siswa{$room->id}",
                 'verified' => false,
-                'role' => 'student',
+                'role' => UserRole::STUDENT->value,
                 'mentor_id' => $men,
                 'room_id' => $room->id,
                 'counselor_id' => $con,
@@ -83,7 +84,7 @@ class UserSeeder extends Seeder
             ]);
             User::factory(8)->create([
                 'verified' => true,
-                'role' => 'student',
+                'role' => UserRole::STUDENT->value,
                 'mentor_id' => $men,
                 'room_id' => $room->id,
                 'counselor_id' => $con,

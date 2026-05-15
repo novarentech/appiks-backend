@@ -7,6 +7,7 @@ use App\Http\Requests\CreateAdminRequest;
 use App\Http\Requests\CreateStudentRequest;
 use App\Http\Requests\CreateUserRequest;
 use App\Http\Requests\UserFirstLoginRequest;
+use App\Http\Requests\UpdateUserRequest;
 use App\Http\Resources\UserResource;
 use App\Imports\UsersImport;
 use App\Imports\UsersImportSync;
@@ -155,7 +156,7 @@ class UserController extends Controller
     #[Group('User')]
     public function getTemplate()
     {
-        return $this->success(['link' => env('APP_URL').'/templates/Template%20Siswa.xlsx']);
+        return $this->success(['link' => config('app.url').'/templates/Template%20Siswa.xlsx']);
     }
 
     /**
@@ -175,66 +176,22 @@ class UserController extends Controller
      * Kalau yang diedit adalah siswa maka butuh room_id (berupa 8 karakter kode kelas) dan mentor_id (berupa NIP Guru Wali). Jika admin yang diedit maka butuh school_id. Selainnya hanya username, phone, identifier, name, dan password
      */
     #[Group('User')]
-    public function edit(Request $request, User $user)
+    public function edit(UpdateUserRequest $request, User $user)
     {
         Gate::allowIf(function (User $auth) use ($user) {
             return ($auth->role == UserRole::ADMIN->value && $auth->school_id == $user->school_id) || ($auth->role == UserRole::SUPER->value);
         });
-        if ($user->role == UserRole::STUDENT->value) {
-            $data = $request->validate([
-                'username' => "string|unique:users,username,{$user->id}",
-                'phone' => "string|digits_between:10,15|unique:users,phone,{$user->id}",
-                'identifier' => "string|digits:10|unique:users,identifier,{$user->id}",
-                'room_id' => 'string|exists:rooms,code',
-                'mentor_id' => [
-                    'string',
-                    Rule::exists('users', 'identifier')->where(function ($query) {
-                        $query->where('role', UserRole::TEACHER->value);
-                    }),
-                ],
-                'name' => 'string',
-                'password' => [
-                    'nullable',
-                    'string',
-                    'min:8',
-                    'regex:/[a-z]/',
-                    'regex:/[A-Z]/',
-                    'regex:/[0-9]/',
-                ],
-            ]);
-            $data['room_id'] = Room::whereCode($data['room_id'])->pluck('id')[0];
-            $data['mentor_id'] = User::whereIdentifier($data['mentor_id'])->pluck('id')[0];
-        } elseif (in_array($user->role, [UserRole::TEACHER->value, UserRole::HEADTEACHER->value, UserRole::COUNSELOR->value])) {
-            $data = $request->validate([
-                'username' => "string|unique:users,username,{$user->id}",
-                'phone' => "string|digits_between:10,15|unique:users,phone,{$user->id}",
-                'identifier' => "string|digits_between:16,25|unique:users,identifier,{$user->id}",
-                'name' => 'string',
-                'password' => [
-                    'nullable',
-                    'string',
-                    'min:8',
-                    'regex:/[a-z]/',
-                    'regex:/[A-Z]/',
-                    'regex:/[0-9]/',
-                ],
-            ]);
-        } elseif ($user->role == UserRole::ADMIN->value) {
-            $data = $request->validate([
-                'username' => "string|unique:users,username,{$user->id}",
-                'phone' => "string|digits_between:10,15|unique:users,phone,{$user->id}",
-                'identifier' => "string|digits_between:16,25|unique:users,identifier,{$user->id}",
-                'name' => 'string',
-                'school_id' => 'integer|exists:schools,id',
-                'password' => [
-                    'nullable',
-                    'string',
-                    'min:8',
-                    'regex:/[a-z]/',
-                    'regex:/[A-Z]/',
-                    'regex:/[0-9]/',
-                ],
-            ]);
+
+        $data = $request->validated();
+
+        // Resolve room_id dari code ke ID (khusus student)
+        if ($user->role === UserRole::STUDENT->value) {
+            if (! empty($data['room_id'])) {
+                $data['room_id'] = Room::whereCode($data['room_id'])->value('id');
+            }
+            if (! empty($data['mentor_id'])) {
+                $data['mentor_id'] = User::whereIdentifier($data['mentor_id'])->value('id');
+            }
         }
 
         if (! empty($data['password'])) {

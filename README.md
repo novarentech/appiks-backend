@@ -12,12 +12,21 @@ Appiks.id is a comprehensive backend solution developed to help schools foster s
 ## 🏗 Architecture & Standardization
 
 This project enforces strict architectural guidelines defined in the [Agent Rule of Architect](agent/RULE_OF_ARCHITECT.md). All modifications must adhere to these standards, including:
-- Utilizing **Action Classes** for business logic.
-- Implementing **Laravel Policies** for authorization.
-- Ensuring **Dynamic Pagination** on list endpoints.
-- Enforcing **SoftDeletes** across major tables.
+- **Action Classes**: Primary layer for complex business logic and third-party integrations (e.g., YouTube Meta, AI Analysis).
+- **Laravel Policies**: Centralized authorization layer for all resource-based access control.
+- **Form Requests**: Dedicated validation layer for handling complex input rules and data normalization.
+- **PHP Enums**: Type-safe management of user roles (`UserRole`) and record statuses (`MoodStatus`, `ReportStatus`).
+- **Event-Driven Design**: Side-effects (like updating priorities or rotating tokens) are isolated using Laravel Events & Listeners.
+- **SoftDeletes**: Enforced across major tables to ensure data safety and audit trails.
 
 *See `agent/technical-reference.md` for integration details with the Next.js frontend.*
+
+## ⚙️ Environment Requirements
+
+To run this project successfully, ensure the following environment variables are configured:
+- `YOUTUBE_API_KEY`: Required for fetching video metadata from YouTube API.
+- `JWT_SECRET`: Secret key for signing JSON Web Tokens.
+- `DEFAULT_PASSWORD`: Default password used for generated student/teacher accounts.
 
 ## 🚀 Key Modules
 

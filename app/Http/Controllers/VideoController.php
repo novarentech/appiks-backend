@@ -2,18 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\FetchYoutubeMetaAction;
 use App\Http\Requests\CreateVideoRequest;
 use App\Http\Resources\VideoResource;
 use App\Models\Article;
 use App\Models\Tag;
 use App\Models\Video;
 use App\Traits\ApiResponder;
-use DateInterval;
 use Dedoc\Scramble\Attributes\Group;
-use Exception;
-use Google\Client;
-use Google\Service\YouTube;
-use Google_Service_Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -137,19 +133,15 @@ class VideoController extends Controller
      * Membuat sebuah video baru. Cukup mengirimkan ID youtube video dan sistem akan mengambil meta data yang dibutuhkan
      */
     #[Group('Video')]
-    public function store(CreateVideoRequest $request)
+    public function store(CreateVideoRequest $request, FetchYoutubeMetaAction $fetcher)
     {
-        $meta = $this->getVideoDetail($request->video_id);
-        $data = $request->all();
-        $tags = $data['tags'];
-        unset($data['tags']);
-        try {
-            $video = Video::create(array_merge($data, $meta));
-        } catch (\Throwable $th) {
-            return $this->error($th->getMessage(), 400, array_merge($data, $meta));
-        }
-        $video->tags()->sync($tags);
-        $res = Video::with(['school', 'tags'])->where('id', $video->id)->first();
+        $meta = $fetcher->handle($request->video_id);
+        $data = $request->safe()->except(['tags']);
+        
+        $video = Video::create(array_merge($data, $meta));
+        $video->tags()->sync($request->validated()['tags'] ?? []);
+        
+        $res = Video::with(['school', 'tags'])->find($video->id);
 
         return $this->success(new VideoResource($res));
     }
@@ -168,7 +160,7 @@ class VideoController extends Controller
             'tags.*' => 'integer|exists:tags,id',
         ]);
         $video->tags()->sync($request->tags);
-        $res = Video::with(['school', 'tags'])->where('id', $video->id)->first();
+        $res = Video::with(['school', 'tags'])->find($video->id);
 
         return $this->success(new VideoResource($res));
     }
@@ -190,60 +182,16 @@ class VideoController extends Controller
     }
 
     /**
-     * Get video detail
+     * Get video detail by internal ID
      *
-     * Mendapatkan video detail berdasarkan ID Youtube
+     * Mendapatkan data detail video berdasarkan id internal di sistem. Juga melakukan refresh meta data dari YouTube
      */
     #[Group('Video')]
-    public function getVideoDetailId(Video $video)
+    public function getVideoDetailId(Video $video, FetchYoutubeMetaAction $fetcher)
     {
         Gate::authorize('view', $video);
-        $data = $this->getVideoDetail($video->video_id);
-        $video->update($data);
+        $video->update($fetcher->handle($video->video_id));
 
         return $this->success(new VideoResource($video));
-    }
-
-    public function getVideoDetail($videoId)
-    {
-        $client = new Client;
-        $client->setDeveloperKey(env('YOUTUBE_API_KEY'));
-
-        $youtube = new YouTube($client);
-
-        try {
-            $response = $youtube->videos->listVideos('snippet,contentDetails,statistics', [
-                'id' => $videoId,
-            ]);
-
-            if (count($response->getItems()) === 0) {
-                return null;
-            }
-
-            $video = $response->getItems()[0];
-
-            $snippet = $video->getSnippet();
-            $contentDetails = $video->getContentDetails();
-            $statistics = $video->getStatistics();
-
-            $duration = new DateInterval($contentDetails->getDuration());
-            $seconds = ($duration->h * 3600) + ($duration->i * 60) + $duration->s;
-
-            return [
-                'video_id' => $videoId,
-                'title' => $snippet->getTitle(),
-                'description' => $snippet->getDescription(),
-                'thumbnail' => $snippet->getThumbnails()->getDefault()->getUrl(),
-                'duration' => gmdate(($seconds >= 3600 ? 'H:i:s' : 'i:s'), $seconds),
-                'channel' => $snippet->getChannelTitle(),
-                'views' => $statistics->getViewCount(),
-            ];
-        } catch (Google_Service_Exception $e) {
-            return $this->error('YouTube API Error: '.$e->getMessage());
-
-            return null;
-        } catch (Exception $e) {
-            return $this->error('General Error: '.$e->getMessage());
-        }
     }
 }

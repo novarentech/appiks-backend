@@ -32,4 +32,30 @@ class ReportPolicy
     {
         return $user->role == UserRole::COUNSELOR->value && $user->school_id == $report->user->school_id;
     }
+
+    /**
+     * Hanya counselor yang boleh melihat dashboard-data report.
+     */
+    public function viewGraph(User $authUser): bool
+    {
+        return $authUser->role === UserRole::COUNSELOR->value
+            || $authUser->role === UserRole::SUPER->value;
+    }
+
+    /**
+     * Hanya Super Admin yang boleh melihat semua report milik student tertentu.
+     */
+    public function viewStudentReports(User $authUser, User $targetUser): bool
+    {
+        return $authUser->role === UserRole::SUPER->value
+            && $targetUser->role === UserRole::STUDENT->value;
+    }
+
+    /**
+     * Hanya student yang boleh melihat 2 latest reportnya sendiri.
+     */
+    public function viewLatest(User $authUser): bool
+    {
+        return $authUser->role === UserRole::STUDENT->value;
+    }
 }

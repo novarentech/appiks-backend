@@ -193,46 +193,8 @@ class DashboardController extends Controller
      * Mendapatkan semua data videe, artikel, dan quotes di sekolah tersebut
      */
     #[Group('Content')]
-    public function content()
+    public function content(\App\Actions\GetMixedContentAction $action)
     {
-        $schoolId = Auth::user()->school_id;
-
-        $videos = Video::select('video_id as ids', 'title', DB::raw("'video' as type"), 'created_at')
-            ->where('school_id', $schoolId);
-
-        $articles = Article::select('slug as ids', 'title', DB::raw("'article' as type"), 'created_at')
-            ->where('school_id', $schoolId);
-
-        $quotes = Quote::select('id as ids', 'text as title', DB::raw("'quote' as type"), 'created_at')
-            ->where('school_id', $schoolId);
-
-        $union = $videos
-            ->union($articles)
-            ->union($quotes);
-
-        $contents = DB::query()
-            ->fromSub($union, 'contents')
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        // inject tags untuk video
-        $videoIds = $contents->where('type', 'video')->pluck('ids');
-
-        $videoTags = Video::with('tags')
-            ->whereIn('video_id', $videoIds)
-            ->get()
-            ->keyBy('video_id');
-
-        $contents->transform(function ($item) use ($videoTags) {
-            if ($item->type === 'video' && isset($videoTags[$item->ids])) {
-                $item->tags = $videoTags[$item->ids]->tags;
-            } else {
-                $item->tags = collect(); // biar konsisten tetap ada field tags
-            }
-
-            return $item;
-        });
-
-        return $this->success($contents);
+        return $this->success($action->handle(Auth::user()->school_id));
     }
 }

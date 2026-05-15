@@ -54,17 +54,16 @@ class ArticleController extends Controller
     #[Group('Article')]
     public function store(CreateArticleRequest $request)
     {
-        $tags = $request->tags[0];
-        $tags = array_map('intval', json_decode($tags));
-        $data = $request->all();
-        unset($data['tags']);
+        $data = $request->safe()->except(['tags']);
+        $tags = $request->validated()['tags'] ?? [];
+
         $path = $request->file('thumbnail')->store('thumbnails', 'public');
-        $data['thumbnail'] = env('APP_URL').Storage::url($path);
+        $data['thumbnail'] = config('app.url') . Storage::url($path);
+
         $article = Article::create($data);
-        $tags = Tag::whereIn('id', $tags)->pluck('id')->toArray();
-        // return $tags;
         $article->tags()->sync($tags);
-        $res = Article::with(['school', 'tags'])->where('id', $article->id)->first();
+
+        $res = Article::with(['school', 'tags'])->find($article->id);
 
         return $this->success(new ArticleResource($res));
     }
@@ -77,38 +76,24 @@ class ArticleController extends Controller
     #[Group('Article')]
     public function update(UpdateArticleRequest $request, Article $article)
     {
-        $data = $request->all();
-        unset($data['tags']);
+        $data = $request->safe()->except(['tags']);
+        $tags = $request->validated()['tags'] ?? [];
 
         // handle thumbnail jika ada file baru
         if ($request->hasFile('thumbnail')) {
-            // opsional: hapus file lama
             if ($article->thumbnail && str_contains($article->thumbnail, '/storage/')) {
-                $oldPath = str_replace(env('APP_URL').'/storage/', '', $article->thumbnail);
+                $oldPath = str_replace(config('app.url') . '/storage/', '', $article->thumbnail);
                 Storage::disk('public')->delete($oldPath);
             }
 
             $path = $request->file('thumbnail')->store('thumbnails', 'public');
-            $data['thumbnail'] = env('APP_URL').Storage::url($path);
-        } else {
-            unset($data['thumbnail']);
+            $data['thumbnail'] = config('app.url') . Storage::url($path);
         }
 
-        // update article
         $article->update($data);
+        $article->tags()->sync($tags);
 
-        // update tags
-        $tags = $request->tags;
-        if (! empty($tags)) {
-            // kalau request seperti store: tags berupa json string
-            if (is_string($tags[0] ?? null)) {
-                $tags = array_map('intval', json_decode($tags[0]));
-            }
-            $tags = Tag::whereIn('id', $tags)->pluck('id')->toArray();
-            $article->tags()->sync($tags);
-        }
-
-        $res = Article::with(['school', 'tags'])->where('id', $article->id)->first();
+        $res = Article::with(['school', 'tags'])->find($article->id);
 
         return $this->success(new ArticleResource($res));
     }

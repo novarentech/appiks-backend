@@ -13,7 +13,7 @@ class AnalyzeInsecurePersonaAction
         $key = implode('', $answers);
         $ans = DB::table('ai_generated')->where('key', $key)->first();
 
-        if ($ans->answer == null) {
+        if (!$ans || $ans->answer == null) {
             $pertanyaan = 'Bagian 1: Kekuatan Super (Strength-Spotter) 
                             N
                             o Pertanyaan Opsi Jawaban (Pilih yang paling mendekati) 
@@ -43,13 +43,14 @@ class AnalyzeInsecurePersonaAction
                             "C.","Sosialis/Kolaborator","The Guardian (Sang Penjaga)","Kekuatan Supermu adalah Empati dan Kerja Sama! Kamu adalah ahli dalam memahami perasaan orang dan menyatukan tim. Kehangatan dan dukunganmu membuat orang lain merasa kuat."
                             "D.","Perencana/Strategis","The Architect (Sang Arsitek)","Kekuatan Supermu adalah Ketelitian dan Organisasi! Kamu hebat dalam merencanakan, menyusun strategi, dan memastikan semuanya berjalan lancar. Kamu adalah orang yang membuat rencana besar menjadi kenyataan."';
             $jawab = json_encode($answers);
-            $perintah = "saya punya daftar pertanyaan ini $pertanyaan. dengan cara penghitungan $carahitung. Hasilkan jenis kepribadian siswa dengan jawaban no. 1-5 $jawab ini berdasarkan cara hitung tersebut. output dalam bentuk JSON (parsed) berikut (hanya contoh, berikan berdasarkan analisamu sendiri) json````main_archtype : 'nama persona utama yang paling dominan',secondary_archtype : 'nama persona kedua yang melengkapi'||null,archtype_character : 'tipe karakter persona. contoh : Mental Baja hanya satu tipe'
-    archtype_habits : 'kebiasaan persona contoh: Kebebasan dan Kreasi hanya 2 tipe dengan dan bukan &',archtype_description : 'deskripsi persona',archtype_power : 'kekuartan persona contoh: Rasa ingin tahu yang tak terkalahkan berbentuk deskriptif maksimal 8 kata'``` tanpa tambahan apapun dengan bahasa antara teman-teman bagi siswa SMA namun jangan terlalu panjang";
+            $perintah = "saya punya daftar pertanyaan ini $pertanyaan. dengan cara penghitungan $carahitung. Hasilkan jenis kepribadian siswa dengan jawaban no. 1-5 $jawab ini berdasarkan cara hitung tersebut. output dalam bentuk JSON (parsed) berikut (hanya contoh, berikan berdasarkan analisamu sendiri) ```json { \"main_archtype\": \"nama persona utama yang paling dominan\", \"secondary_archtype\": \"nama persona kedua yang melengkapi atau null\", \"archtype_character\": \"tipe karakter persona. contoh : Mental Baja hanya satu tipe\", \"archtype_habits\": \"kebiasaan persona contoh: Kebebasan dan Kreasi hanya 2 tipe dengan dan bukan &\", \"archtype_description\": \"deskripsi persona\", \"archtype_power\": \"kekuatan persona contoh: Rasa ingin tahu yang tak terkalahkan berbentuk deskriptif maksimal 8 kata\" } ``` tanpa tambahan apapun dengan bahasa antara teman-teman bagi siswa SMA namun jangan terlalu panjang";
             
             $hasil = $this->gemini->handle($perintah, 600);
             $hasil = str_replace(['```', 'json'], '', $hasil);
-            DB::table('ai_generated')->where('key', $key)
-                ->update(['answer' => $hasil, 'updated_at' => now()]);
+            DB::table('ai_generated')->updateOrInsert(
+                ['key' => $key],
+                ['answer' => $hasil, 'updated_at' => now()]
+            );
         } else {
             $hasil = $ans->answer;
         }
