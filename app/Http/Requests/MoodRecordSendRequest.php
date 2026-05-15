@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\UserRole;
 use App\Models\MoodRecord;
 use App\Traits\ApiResponder;
 use Carbon\Carbon;
@@ -18,7 +19,7 @@ class MoodRecordSendRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        $user = Auth::user()->role == 'student';
+        $user = Auth::user()->role == UserRole::STUDENT->value;
         $mood = MoodRecord::where('user_id', Auth::id())->where('recorded', Carbon::today())->get()->count() == 0;
 
         return $user && $mood;

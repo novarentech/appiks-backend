@@ -2,6 +2,7 @@
 
 namespace App\Imports;
 
+use App\Enums\UserRole;
 use App\Models\Room;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -37,7 +38,7 @@ class UsersImportSync implements ToCollection, WithHeadingRow
 
     public function collection(Collection $rows)
     {
-        logs()->info('Payload: '.$rows[0]);
+        logs()->info('Payload: ' . $rows[0]);
         $users = [];
         foreach ($rows as $row) {
             if (empty($row['nisn']) || empty($row['nama'])) {
@@ -53,12 +54,12 @@ class UsersImportSync implements ToCollection, WithHeadingRow
                     'room_id' => $this->rooms[$row['kode_kelas']],
                     'school_id' => $this->schoolId,
                     'password' => $this->defaultPassword,
-                    'role' => 'student',
+                    'role' => UserRole::STUDENT->value,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
             } catch (\Throwable $th) {
-                logs()->error('Gagal menambahkan: '.$th->getMessage());
+                logs()->error('Gagal menambahkan: ' . $th->getMessage());
                 break;
             }
         }
@@ -66,7 +67,7 @@ class UsersImportSync implements ToCollection, WithHeadingRow
         DB::table('users')->insert($users);
         $nisnValues = collect($users)->pluck('identifier');
         $this->insertedUsers = User::whereIn('identifier', $nisnValues)->get();
-        logs()->info('Total ditambahkan: '.count($this->insertedUsers));
+        logs()->info('Total ditambahkan: ' . count($this->insertedUsers));
     }
 
     public function getInsertedUsers()

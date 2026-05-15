@@ -20,7 +20,7 @@ class ReportSeeder extends Seeder
         foreach ($students as $student) {
             // ambil 10 tanggal unik acak dalam 30 hari terakhir
             $dates = collect(range(0, 35))
-                ->map(fn ($i) => Carbon::yesterday()->subDays($i))
+                ->map(fn($i) => Carbon::yesterday()->subDays($i))
                 ->shuffle()
                 ->take(10)
                 ->values();

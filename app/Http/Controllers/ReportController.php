@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ReportStatus;
+use App\Enums\UserRole;
+use App\Events\ReportCreated;
 use App\Http\Requests\CloseReportRequest;
 use App\Http\Requests\ConfirmReportRequest;
 use App\Http\Requests\CreateReportRequest;
 use App\Http\Requests\RescheduleReportRequest;
 use App\Http\Resources\ReportResource;
 use App\Models\Report;
-use App\Models\Sharing;
 use App\Models\User;
 use App\Traits\ApiResponder;
 use Carbon\Carbon;
@@ -29,9 +31,9 @@ class ReportController extends Controller
     public function index()
     {
         $user = Auth::user();
-        if ($user->role == 'student') {
+        if ($user->role == UserRole::STUDENT->value) {
             $reports = $user->report()->with(['counselor', 'user'])->orderBy('date')->get();
-        } elseif ($user->role == 'counselor') {
+        } elseif ($user->role == UserRole::COUNSELOR->value) {
             $reports = Report::with(['counselor', 'user', 'user.room'])->whereIn('user_id', $user->counselored->pluck('id'))->get();
         }
 
@@ -50,13 +52,13 @@ class ReportController extends Controller
         $reports = Report::whereCreatedAt(Carbon::today())->whereIn('user_id', $user->counselored->pluck('id'))->get();
 
         $countsByStatusArray = $reports->countBy('status')->toArray();
+        $statuses = ReportStatus::cases();
+        $result = [];
+        foreach ($statuses as $status) {
+            $result[$status->value] = (int) ($countsByStatusArray[$status->value] ?? 0);
+        }
 
-        return $this->success([
-            'dijadwalkan' => (int) ($countsByStatusArray['dijadwalkan'] ?? 0),
-            'menunggu' => (int) ($countsByStatusArray['menunggu'] ?? 0),
-            'selesai' => (int) ($countsByStatusArray['selesai'] ?? 0),
-            'dibatalkan' => (int) ($countsByStatusArray['dibatalkan'] ?? 0),
-        ]);
+        return $this->success($result);
     }
 
     /**
@@ -65,8 +67,8 @@ class ReportController extends Controller
     #[Group('Report')]
     public function store(CreateReportRequest $request)
     {
-        $report = Report::create($request->all());
-        Sharing::where('user_id', Auth::id())->where('created_at', 'like', now()->toDateString().'%')->update(['priority' => 'tinggi']);
+        $report = Report::create($request->validated());
+        ReportCreated::dispatch($report);
 
         return $this->created(new ReportResource($report));
     }
@@ -91,7 +93,7 @@ class ReportController extends Controller
     public function reportOfStudent(User $user)
     {
         Gate::allowIf(function (User $authUser) use ($user) {
-            return $authUser->role == 'super' && $user->role == 'student';
+            return $authUser->role == UserRole::SUPER->value && $user->role == UserRole::STUDENT->value;
         });
         $reports = Report::with('counselor')->whereUserId($user->id)->get();
 
@@ -104,7 +106,7 @@ class ReportController extends Controller
     #[Group('Report')]
     public function confirm(ConfirmReportRequest $request, Report $report)
     {
-        $report->update($request->all());
+        $report->update($request->validated());
 
         return $this->created(new ReportResource($report));
     }
@@ -115,7 +117,7 @@ class ReportController extends Controller
     #[Group('Report')]
     public function reschedule(RescheduleReportRequest $request, Report $report)
     {
-        $report->update($request->all());
+        $report->update($request->validated());
 
         return $this->created(new ReportResource($report));
     }
@@ -126,7 +128,7 @@ class ReportController extends Controller
     #[Group('Report')]
     public function close(CloseReportRequest $request, Report $report)
     {
-        $report->update(['result' => $request->result, 'status' => 'selesai']);
+        $report->update(['result' => $request->result, 'status' => ReportStatus::SELESAI->value]);
 
         return $this->created(new ReportResource($report));
     }
@@ -137,7 +139,7 @@ class ReportController extends Controller
     #[Group('Report')]
     public function cancel(CloseReportRequest $request, Report $report)
     {
-        $report->update(['result' => $request->result, 'status' => 'dibatalkan']);
+        $report->update(['result' => $request->result, 'status' => ReportStatus::DIBATALKAN->value]);
 
         return $this->created(new ReportResource($report));
     }
@@ -181,7 +183,7 @@ class ReportController extends Controller
     public function latestOfStudent()
     {
         Gate::allowIf(function (User $user) {
-            return $user->role == 'student';
+            return $user->role == UserRole::STUDENT->value;
         });
         $reports = Report::with(['counselor'])->whereUserId(Auth::id())->latest()->take(2)->get();
 

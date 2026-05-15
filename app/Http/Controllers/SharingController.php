@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Http\Requests\CreateSharingRequest;
 use App\Http\Requests\ReplySharingRequest;
 use App\Http\Resources\SharingResource;
@@ -26,12 +27,12 @@ class SharingController extends Controller
     public function index()
     {
         Gate::allowIf(function (User $user) {
-            return in_array($user->role, ['student', 'counselor']);
+            return in_array($user->role, [UserRole::STUDENT->value, UserRole::COUNSELOR->value]);
         });
         $user = Auth::user();
-        if ($user->role == 'student') {
+        if ($user->role == UserRole::STUDENT->value) {
             $sharings = $user->sharing()->with(['user'])->orderBy('replied_at')->get();
-        } elseif ($user->role == 'counselor') {
+        } elseif ($user->role == UserRole::COUNSELOR->value) {
             $sharings = Sharing::with(['user', 'user.room'])->whereIn('user_id', $user->counselored->pluck('id'))->get();
         }
 
@@ -47,7 +48,7 @@ class SharingController extends Controller
     public function getSharingCount()
     {
         Gate::allowIf(function (User $user) {
-            return $user->role == 'counselor';
+            return $user->role == UserRole::COUNSELOR->value;
         });
         $user = Auth::user();
         $sharings = Sharing::whereDate('created_at', Carbon::today())
@@ -85,7 +86,7 @@ class SharingController extends Controller
     public function show(Sharing $sharing)
     {
         Gate::allowIf(function (User $authUser) use ($sharing) {
-            return $authUser->role == 'super' || ($authUser->role == 'counselor' && $authUser->id === $sharing->user->counselor_id) || ($authUser->role == 'student' && $authUser->id === $sharing->user_id);
+            return $authUser->role == UserRole::SUPER->value || ($authUser->role == UserRole::COUNSELOR->value && $authUser->id === $sharing->user->counselor_id) || ($authUser->role == UserRole::STUDENT->value && $authUser->id === $sharing->user_id);
         });
 
         return $this->success(new SharingResource($sharing));
@@ -100,7 +101,7 @@ class SharingController extends Controller
     public function sharingOfStudent(User $user)
     {
         Gate::allowIf(function (User $auth) use ($user) {
-            return $auth->role == 'super' && $user->role == 'student';
+            return $auth->role == UserRole::SUPER->value && $user->role == UserRole::STUDENT->value;
         });
         $sharings = Sharing::whereUserId($user->id)->get();
 
@@ -127,7 +128,7 @@ class SharingController extends Controller
     public function latestOfStudent()
     {
         Gate::allowIf(function (User $user) {
-            return $user->role == 'student';
+            return $user->role == UserRole::STUDENT->value;
         });
         $sharings = Sharing::whereUserId(Auth::id())->latest()->take(2)->get();
 

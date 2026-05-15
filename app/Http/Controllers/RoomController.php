@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Http\Requests\CreateRoomRequest;
 use App\Http\Resources\RoomResource;
 use App\Models\Room;
@@ -41,9 +42,9 @@ class RoomController extends Controller
     {
         Gate::authorize('dashboard-data');
         $room = Room::where('school_id', Auth::user()->school_id)->count();
-        $student = User::where('school_id', Auth::user()->school_id)->whereRole('student')->count();
+        $student = User::where('school_id', Auth::user()->school_id)->whereRole(UserRole::STUDENT->value)->count();
 
-        return $this->success(['student' => (int) $student, 'room' => (int) $room]);
+        return $this->success([UserRole::STUDENT->value => (int) $student, 'room' => (int) $room]);
     }
 
     /**
@@ -55,7 +56,7 @@ class RoomController extends Controller
     public function index()
     {
         Gate::authorize('dashboard-data');
-        if (Auth::user()->role == 'super') {
+        if (Auth::user()->role == UserRole::SUPER->value) {
             $rooms = Room::with('school')->withCount('students')->get();
         } else {
             $rooms = Room::with('school')->withCount('students')->where('school_id', Auth::user()->school_id)->get();
@@ -101,7 +102,7 @@ class RoomController extends Controller
     public function roomOfSchool(Request $request, School $school)
     {
         Gate::allowIf(function (User $user) {
-            return $user->role == 'super';
+            return $user->role == UserRole::SUPER->value;
         });
         $rooms = Room::with('school')->withCount('students')->where('school_id', $school->id)->get();
 
@@ -144,7 +145,7 @@ class RoomController extends Controller
     public function destroy(Request $request, Room $room)
     {
         Gate::allowIf(function (User $user) use ($room) {
-            return $user->role == 'admin' && $user->school_id == $room->school_id;
+            return $user->role == UserRole::ADMIN->value && $user->school_id == $room->school_id;
         });
         $data = $room->toArray();
         $room->delete();
@@ -161,7 +162,7 @@ class RoomController extends Controller
     public function update(Request $request, Room $room)
     {
         Gate::allowIf(function (User $user) use ($room) {
-            return $user->role == 'admin' && $user->school_id == $room->school_id;
+            return $user->role == UserRole::ADMIN->value && $user->school_id == $room->school_id;
         });
         $request->validate([
             'name' => 'required|string',

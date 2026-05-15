@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\MoodStatus;
+use App\Enums\UserRole;
 use App\Models\Article;
 use App\Models\MoodRecord;
 use App\Models\Quote;
@@ -30,14 +32,14 @@ class DashboardController extends Controller
     public function headteacher()
     {
         Gate::allowIf(function (User $user) {
-            return $user->role == 'headteacher';
+            return $user->role == UserRole::HEADTEACHER->value;
         });
         $school = Auth::user()->school;
 
         // Hitung user per role langsung di database
-        $student_count = $school->users()->whereRole('student')->count();
-        $teacher_count = $school->users()->whereRole('teacher')->count();
-        $counselor_count = $school->users()->whereRole('counselor')->count();
+        $student_count = $school->users()->whereRole(UserRole::STUDENT->value)->count();
+        $teacher_count = $school->users()->whereRole(UserRole::TEACHER->value)->count();
+        $counselor_count = $school->users()->whereRole(UserRole::COUNSELOR->value)->count();
 
         // Hitung jumlah room langsung di query
         $room_count = $school->rooms()->count();
@@ -59,7 +61,7 @@ class DashboardController extends Controller
     public function contentStatistics()
     {
         Gate::allowIf(function (User $user) {
-            return $user->role == 'admin';
+            return $user->role == UserRole::ADMIN->value;
         });
         $school = Auth::user()
             ->school()
@@ -86,15 +88,15 @@ class DashboardController extends Controller
     public function teacher()
     {
         Gate::allowIf(function (User $user) {
-            return $user->role == 'teacher';
+            return $user->role == UserRole::TEACHER->value;
         });
-        $student = User::whereRole('student')->whereMentorId(Auth::id());
+        $student = User::whereRole(UserRole::STUDENT->value)->whereMentorId(Auth::id());
         $student_count = $student->count();
         $moods = MoodRecord::whereIn('user_id', User::where('mentor_id', Auth::id())->pluck('id'))->where('recorded', Carbon::today());
 
         $mood_today_count = $moods->count();
-        $mood_secure_count = $moods->whereIn('status', ['happy', 'neutral'])->count();
-        $mood_insecure_count = $moods->whereIn('status', ['sad', 'angry'])->count();
+        $mood_secure_count = $moods->whereIn('status', MoodStatus::secureValues())->count();
+        $mood_insecure_count = $moods->whereIn('status', MoodStatus::insecureValues())->count();
 
         return $this->success([
             'student_count' => (int) $student_count,
@@ -113,9 +115,9 @@ class DashboardController extends Controller
     public function counselor()
     {
         Gate::allowIf(function (User $user) {
-            return $user->role == 'counselor';
+            return $user->role == UserRole::COUNSELOR->value;
         });
-        $student = User::whereRole('student')->whereCounselorId(Auth::id());
+        $student = User::whereRole(UserRole::STUDENT->value)->whereCounselorId(Auth::id());
         $student_count = $student->count();
 
         $report_today_count = Report::whereCreatedAt(Carbon::today())->whereIn('user_id', $student->pluck('id')->toArray())->count();
@@ -139,7 +141,7 @@ class DashboardController extends Controller
     public function admin()
     {
         Gate::allowIf(function (User $user) {
-            return $user->role == 'admin';
+            return $user->role == UserRole::ADMIN->value;
         });
         $school = Auth::user()->school;
 
@@ -174,10 +176,10 @@ class DashboardController extends Controller
     public function super()
     {
         Gate::allowIf(function (User $user) {
-            return $user->role == 'super';
+            return $user->role == UserRole::SUPER->value;
         });
         $school_count = School::count();
-        $admin_count = User::whereRole('admin')->count();
+        $admin_count = User::whereRole(UserRole::ADMIN->value)->count();
 
         return $this->success([
             'school_count' => (int) $school_count,

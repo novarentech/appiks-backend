@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\UserRole;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 
@@ -12,7 +13,7 @@ class AnalyzeQuestionnaireRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return Auth::user()->role == 'student';
+        return Auth::user()->role == UserRole::STUDENT->value;
     }
 
     /**

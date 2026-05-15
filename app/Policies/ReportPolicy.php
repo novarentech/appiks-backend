@@ -2,6 +2,8 @@
 
 namespace App\Policies;
 
+use App\Enums\MoodStatus;
+use App\Enums\UserRole;
 use App\Models\Report;
 use App\Models\User;
 
@@ -20,7 +22,7 @@ class ReportPolicy
      */
     public function create(User $user): bool
     {
-        return $user->role == 'student' && in_array($user->lastmood(), ['angry', 'sad']);
+        return $user->role == UserRole::STUDENT->value && in_array($user->last_mood, [MoodStatus::ANGRY->value, MoodStatus::SAD->value]);
     }
 
     /**
@@ -28,6 +30,6 @@ class ReportPolicy
      */
     public function update(User $user, Report $report): bool
     {
-        return $user->role == 'counselor' && $user->school_id == $report->user->school_id;
+        return $user->role == UserRole::COUNSELOR->value && $user->school_id == $report->user->school_id;
     }
 }

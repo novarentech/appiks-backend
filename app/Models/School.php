@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -26,27 +27,27 @@ class School extends Model
 
     public function admins()
     {
-        return $this->hasMany(User::class)->where('role', 'admin');
+        return $this->hasMany(User::class)->where('role', UserRole::ADMIN->value);
     }
 
     public function headteacher()
     {
-        return $this->hasOne(User::class)->where('role', 'headteacher');
+        return $this->hasOne(User::class)->where('role', UserRole::HEADTEACHER->value);
     }
 
-    public function conselors()
+    public function counselors()
     {
-        return $this->hasMany(User::class)->where('role', 'conselor');
+        return $this->hasMany(User::class)->where('role', UserRole::COUNSELOR->value);
     }
 
     public function teachers()
     {
-        return $this->hasMany(User::class)->where('role', 'teacher');
+        return $this->hasMany(User::class)->where('role', UserRole::TEACHER->value);
     }
 
     public function students()
     {
-        return $this->hasMany(User::class)->where('role', 'student');
+        return $this->hasMany(User::class)->where('role', UserRole::STUDENT->value);
     }
 
     public function videos()

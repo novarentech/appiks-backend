@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\UserRole;
 use App\Models\School;
 use App\Models\User;
 
@@ -12,7 +13,7 @@ class SchoolPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->role == 'super';
+        return $user->role == UserRole::SUPER->value;
     }
 
     /**
@@ -20,7 +21,7 @@ class SchoolPolicy
      */
     public function view(User $user, School $school): bool
     {
-        return $user->role == 'super' || ($user->school_id == $school->id);
+        return $user->role == UserRole::SUPER->value || ($user->school_id == $school->id);
     }
 
     /**
@@ -28,7 +29,7 @@ class SchoolPolicy
      */
     public function create(User $user): bool
     {
-        return $user->role == 'super';
+        return $user->role == UserRole::SUPER->value;
     }
 
     /**
@@ -36,7 +37,7 @@ class SchoolPolicy
      */
     public function update(User $user, School $school): bool
     {
-        return $user->role == 'super';
+        return $user->role == UserRole::SUPER->value;
     }
 
     /**
@@ -44,6 +45,6 @@ class SchoolPolicy
      */
     public function delete(User $user, School $school): bool
     {
-        return $user->role == 'super';
+        return $user->role == UserRole::SUPER->value;
     }
 }

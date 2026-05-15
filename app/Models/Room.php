@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -21,6 +22,6 @@ class Room extends Model
 
     public function students()
     {
-        return $this->hasMany(User::class)->where('role', 'student');
+        return $this->hasMany(User::class)->where('role', UserRole::STUDENT->value);
     }
 }

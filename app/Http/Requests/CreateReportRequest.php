@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\MoodStatus;
 use App\Models\Report;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -43,7 +44,7 @@ class CreateReportRequest extends FormRequest
         $this->merge([
             'user_id' => Auth::id(),
             'counselor_id' => Auth::user()->counselor_id,
-            'priority' => Auth::user()->lastmood() == 'angry' ? 'tinggi' : 'rendah',
+            'priority' => Auth::user()->last_mood == MoodStatus::ANGRY->value ? 'tinggi' : 'rendah',
         ]);
     }
 }

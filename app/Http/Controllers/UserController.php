@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Http\Requests\CreateAdminRequest;
 use App\Http\Requests\CreateStudentRequest;
 use App\Http\Requests\CreateUserRequest;
@@ -31,8 +32,8 @@ class UserController extends Controller
     public function getStudents()
     {
         $role = Auth::user()->role;
-        $role = $role == 'teacher' ? 'mentor' : 'counselor';
-        $students = User::with(['room', 'mentor', 'lastmoodres'])->whereRole('student')->where($role.'_id', Auth::id())->get();
+        $role = $role == UserRole::TEACHER->value ? 'mentor' : 'counselor';
+        $students = User::with(['room', 'mentor', 'lastmoodres'])->whereRole(UserRole::STUDENT->value)->where($role.'_id', Auth::id())->get();
 
         return $this->success(UserResource::collection($students));
     }
@@ -91,10 +92,10 @@ class UserController extends Controller
     public function destroy(User $user)
     {
         Gate::allowIf(function (User $auth) use ($user) {
-            if ($auth->role == 'admin' && ! in_array($user->role, ['super', 'admin'])) {
+            if ($auth->role == UserRole::ADMIN->value && ! in_array($user->role, [UserRole::SUPER->value, UserRole::ADMIN->value])) {
                 return $auth->school_id == $user->school_id;
-            } elseif ($auth->role == 'super') {
-                return $user->role == 'admin';
+            } elseif ($auth->role == UserRole::SUPER->value) {
+                return $user->role == UserRole::ADMIN->value;
             }
 
             return false;
@@ -125,9 +126,9 @@ class UserController extends Controller
     public function getUsersByType(string $type)
     {
         Gate::allowIf(function (User $user) {
-            return $user->role != 'student';
+            return $user->role != UserRole::STUDENT->value;
         });
-        if (Auth::user()->role == 'super') {
+        if (Auth::user()->role == UserRole::SUPER->value) {
             $users = User::with('school')->whereRole($type)->get();
         } else {
 
@@ -177,9 +178,9 @@ class UserController extends Controller
     public function edit(Request $request, User $user)
     {
         Gate::allowIf(function (User $auth) use ($user) {
-            return ($auth->role == 'admin' && $auth->school_id == $user->school_id) || ($auth->role == 'super');
+            return ($auth->role == UserRole::ADMIN->value && $auth->school_id == $user->school_id) || ($auth->role == UserRole::SUPER->value);
         });
-        if ($user->role == 'student') {
+        if ($user->role == UserRole::STUDENT->value) {
             $data = $request->validate([
                 'username' => "string|unique:users,username,{$user->id}",
                 'phone' => "string|digits_between:10,15|unique:users,phone,{$user->id}",
@@ -188,7 +189,7 @@ class UserController extends Controller
                 'mentor_id' => [
                     'string',
                     Rule::exists('users', 'identifier')->where(function ($query) {
-                        $query->where('role', 'teacher');
+                        $query->where('role', UserRole::TEACHER->value);
                     }),
                 ],
                 'name' => 'string',
@@ -203,7 +204,7 @@ class UserController extends Controller
             ]);
             $data['room_id'] = Room::whereCode($data['room_id'])->pluck('id')[0];
             $data['mentor_id'] = User::whereIdentifier($data['mentor_id'])->pluck('id')[0];
-        } elseif (in_array($user->role, ['teacher', 'headteacher', 'counselor'])) {
+        } elseif (in_array($user->role, [UserRole::TEACHER->value, UserRole::HEADTEACHER->value, UserRole::COUNSELOR->value])) {
             $data = $request->validate([
                 'username' => "string|unique:users,username,{$user->id}",
                 'phone' => "string|digits_between:10,15|unique:users,phone,{$user->id}",
@@ -218,7 +219,7 @@ class UserController extends Controller
                     'regex:/[0-9]/',
                 ],
             ]);
-        } elseif ($user->role == 'admin') {
+        } elseif ($user->role == UserRole::ADMIN->value) {
             $data = $request->validate([
                 'username' => "string|unique:users,username,{$user->id}",
                 'phone' => "string|digits_between:10,15|unique:users,phone,{$user->id}",

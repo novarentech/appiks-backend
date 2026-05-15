@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Models\SelfHelp;
 use App\Models\User;
 use App\Traits\ApiResponder;
@@ -25,7 +26,7 @@ class SelfHelpController extends Controller
     public function getByType(Request $request, string $type, User $user)
     {
         Gate::allowIf(function ($auth) use ($user) {
-            return $auth->role == 'teacher' && $auth->id == $user->mentor_id;
+            return $auth->role == UserRole::TEACHER->value && $auth->id == $user->mentor_id;
         });
         $responses = SelfHelp::whereType($type)->whereUserId($user->id)->get();
 
@@ -39,7 +40,7 @@ class SelfHelpController extends Controller
     public function createDaily(Request $request)
     {
         Gate::allowIf(function ($user) {
-            return $user->role == 'student';
+            return $user->role == UserRole::STUDENT->value;
         });
         $request->validate([
             'mind' => 'required|string',
@@ -60,7 +61,7 @@ class SelfHelpController extends Controller
     public function createGratitude(Request $request)
     {
         Gate::allowIf(function ($user) {
-            return $user->role == 'student';
+            return $user->role == UserRole::STUDENT->value;
         });
         $request->validate([
             'progress' => 'required|array',
@@ -81,7 +82,7 @@ class SelfHelpController extends Controller
     public function createGrounding(Request $request)
     {
         Gate::allowIf(function ($user) {
-            return $user->role == 'student';
+            return $user->role == UserRole::STUDENT->value;
         });
         $request->validate([
             'one' => 'required|array|size:1',
@@ -107,7 +108,7 @@ class SelfHelpController extends Controller
     public function createSensory(Request $request)
     {
         Gate::allowIf(function ($user) {
-            return $user->role == 'student';
+            return $user->role == UserRole::STUDENT->value;
         });
         $request->validate([
             'activity' => 'required|array',

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\MoodStatus;
+use App\Enums\UserRole;
 use App\Http\Requests\CreateQuoteRequest;
 use App\Http\Resources\QuoteResource;
 use App\Models\Quote;
@@ -36,9 +38,9 @@ class QuoteController extends Controller
     #[Group('Quote')]
     public function getByType()
     {
-        Gate::allowIf(fn (User $user) => $user->role == 'student' && $user->lastmood() !== null);
-        $type = Auth::user()->lastmood();
-        $type = in_array($type, ['happy', 'neutral']) ? 'secure' : 'insecure';
+        Gate::allowIf(fn (User $user) => $user->role == UserRole::STUDENT->value && $user->last_mood !== null);
+        $type = Auth::user()->last_mood;
+        $type = MoodStatus::from($type)->isSecure() ? 'secure' : 'insecure';
         $quotes = Quote::whereType($type)->where('school_id', Auth::user()->school_id)->inRandomOrder()->take(1)->first();
 
         return $this->success(new QuoteResource($quotes));
@@ -78,7 +80,7 @@ class QuoteController extends Controller
     #[Group('Quote')]
     public function show(Quote $quote)
     {
-        Gate::allowIf(fn (User $user) => $user->role == 'admin' && $user->school_id == $quote->school_id);
+        Gate::allowIf(fn (User $user) => $user->role == UserRole::ADMIN->value && $user->school_id == $quote->school_id);
 
         return $this->success(new QuoteResource($quote));
     }
@@ -91,7 +93,7 @@ class QuoteController extends Controller
     #[Group('Quote')]
     public function destroy(Quote $quote)
     {
-        Gate::allowIf(fn (User $user) => $user->role == 'admin' && $user->school_id == $quote->school_id);
+        Gate::allowIf(fn (User $user) => $user->role == UserRole::ADMIN->value && $user->school_id == $quote->school_id);
         $data = $quote->toArray();
         $quote->delete();
 

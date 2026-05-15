@@ -2,6 +2,11 @@
 
 namespace App\Providers;
 
+use App\Enums\UserRole;
+use App\Events\GeminiTokenUsed;
+use App\Events\ReportCreated;
+use App\Listeners\RotateGeminiToken;
+use App\Listeners\UpdateRelatedSharingPriority;
 use App\Models\Cloud;
 use App\Models\User;
 use App\Observers\CloudObserver;
@@ -9,6 +14,7 @@ use App\Observers\UserObserver;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -34,8 +40,18 @@ class AppServiceProvider extends ServiceProvider
                 );
             });
         Gate::define('dashboard-data', function (User $user) {
-            return $user->role != 'student';
+            return $user->role != UserRole::STUDENT->value;
         });
+
+        Event::listen(
+            ReportCreated::class,
+            UpdateRelatedSharingPriority::class,
+        );
+
+        Event::listen(
+            GeminiTokenUsed::class,
+            RotateGeminiToken::class,
+        );
         User::observe(UserObserver::class);
         Cloud::observe(CloudObserver::class);
     }

@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\UserRole;
 use App\Models\Sharing;
 use App\Models\User;
 
@@ -20,7 +21,7 @@ class SharingPolicy
      */
     public function create(User $user): bool
     {
-        return $user->role == 'student';
+        return $user->role == UserRole::STUDENT->value;
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Imports;
 
+use App\Enums\UserRole;
 use App\Models\Room;
 use App\Models\User;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -55,7 +56,7 @@ class UsersImport implements ShouldQueue, ToCollection, WithChunkReading, WithCo
                 'room_id' => $this->rooms[$row['kode_kelas']],
                 'school_id' => $this->schoolId,
                 'password' => $this->defaultPassword,
-                'role' => 'student',
+                'role' => UserRole::STUDENT->value,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];

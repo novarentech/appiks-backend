@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Http\Resources\CloudResource;
 use App\Models\User;
 use App\Traits\ApiResponder;
@@ -21,7 +22,7 @@ class GameController extends Controller
     public function cirrus()
     {
         Gate::allowIf(function (User $user) {
-            return $user->role == 'student';
+            return $user->role == UserRole::STUDENT->value;
         });
         $user = Auth::user();
         $cirrus = $user->cloud;
@@ -36,12 +37,12 @@ class GameController extends Controller
     public function buy(Request $request)
     {
         Gate::allowIf(function (User $user) {
-            return $user->role == 'student';
+            return $user->role == UserRole::STUDENT->value;
         });
         $user = Auth::user();
         $cirrus = $user->cloud;
         $request->validate([
-            'water' => 'required|integer|max:'.$cirrus->water,
+            'water' => 'required|integer|max:' . $cirrus->water,
             'exp' => 'required|integer',
             'happiness' => 'required|integer',
         ]);
@@ -63,7 +64,7 @@ class GameController extends Controller
     public function claim(Request $request)
     {
         Gate::allowIf(function (User $user) {
-            return $user->role === 'student';
+            return $user->role === UserRole::STUDENT->value;
         });
 
         $user = Auth::user();

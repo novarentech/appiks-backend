@@ -24,11 +24,11 @@ class SelfHelpSeeder extends Seeder
 
                 SelfHelp::factory()
                     ->{$type}()
-                    ->create([
-                        'user_id' => $student->id,
-                        'created_at' => $date,
-                        'updated_at' => $date,
-                    ]);
+                        ->create([
+                            'user_id' => $student->id,
+                            'created_at' => $date,
+                            'updated_at' => $date,
+                        ]);
             }
         }
     }

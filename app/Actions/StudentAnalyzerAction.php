@@ -1,17 +1,14 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Actions;
 
-use App\Traits\GeminiTrait;
-use Gemini\Data\GenerationConfig;
-use Gemini\Laravel\Facades\Gemini;
 use Illuminate\Support\Facades\DB;
 
-class StudentAnalyzer
+class StudentAnalyzerAction
 {
-    use GeminiTrait;
+    public function __construct(private CallGeminiAction $gemini) {}
 
-    public static function analyzeInsecureQuiz(): string
+    public function analyzeInsecureQuiz(): string
     {
         $archtype_data = [
             'SAGE' => [
@@ -51,13 +48,10 @@ Buatkan 3 bagian teks yang unik dan sangat personal dalam format JSON (JANGAN gu
   \"mission_first\": \"Misi tantangan yang mengikat Kekuatan Super dan Gaya Belajar. Harus berupa tindakan belajar konkret dalam 1 kalimat.\",
   \"mission_second\": \"Misi tantangan yang mengasah Mental Baja/Resiliensi saat menghadapi kegagalan, dalam 1-2 kalimat.\"
 }";
-        // return $prompt_template;
-        // Panggil Model AI
-        $currentToken = DB::table('gemini_api_token')->where('used', true)->first();
-        config(['gemini.api_key' => $currentToken->token]);
-        $geminiModel = Gemini::generativeModel('models/gemini-2.0-flash');
-        $generationConfig = new GenerationConfig(maxOutputTokens: 6000);
-        $ai_results = $geminiModel->withGenerationConfig($generationConfig)->generateContent($prompt_template)->text();
+        
+        $result = $this->gemini->handle($prompt_template, 6000);
+        $ai_results = json_decode($result, true);
+        
         $final_result = [
             'archtype' => $hardcoded_profile['archtype'],
             'arctype_char' => $hardcoded_profile['arctype_char'],

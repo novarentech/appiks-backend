@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\BuildMoodRecapAction;
+use App\Actions\StoreMoodRecordAction;
+use App\Enums\MoodStatus;
+use App\Enums\UserRole;
 use App\Exports\AllMoodExport;
 use App\Exports\StudentMoodExport;
 use App\Http\Requests\MoodRecordSendRequest;
@@ -58,7 +62,7 @@ class MoodRecordController extends Controller
     {
         $mood = MoodRecord::where('user_id', Auth::id())->where('recorded', Carbon::today())->first();
         if ($mood) {
-            return $this->success(['type' => $mood->status, 'status' => in_array($mood->status, ['happy', 'neutral']) ? 'secure' : 'insecure']);
+            return $this->success(['type' => $mood->status, 'status' => MoodStatus::from($mood->status)->isSecure() ? 'secure' : 'insecure']);
         }
 
         return $this->error("User doesn't have mood record today", 404, null);
@@ -72,22 +76,27 @@ class MoodRecordController extends Controller
     #[Group('Mood Record')]
     public function streaks()
     {
-        $userId = Auth::id();
-        $streak = 0;
-        $date = Carbon::today();
+        // Ambil semua tanggal mood dalam 1 query, urutkan descending
+        $dates = MoodRecord::forUser(Auth::id())
+            ->orderBy('recorded', 'desc')
+            ->pluck('recorded')
+            ->map(fn($d) => Carbon::parse($d)->toDateString())
+            ->unique()
+            ->values();
 
-        while (
-            MoodRecord::where('user_id', $userId)
-                ->whereDate('recorded', $date)
-                ->exists()
-        ) {
-            $streak++;
-            $date->subDay(); // mundur 1 hari
+        $streak = 0;
+        $expected = Carbon::today()->toDateString();
+
+        foreach ($dates as $date) {
+            if ($date === $expected) {
+                $streak++;
+                $expected = Carbon::parse($expected)->subDay()->toDateString();
+            } else {
+                break;
+            }
         }
 
-        return $this->success([
-            'streak' => $streak,
-        ]);
+        return $this->success(['streak' => $streak]);
     }
 
     /**
@@ -101,7 +110,7 @@ class MoodRecordController extends Controller
     public function recapPerMonth(string $month)
     {
         Gate::allowIf(function (User $user) {
-            return $user->role == 'student';
+            return $user->role == UserRole::STUDENT->value;
         });
         $mood = MoodRecord::where('user_id', Auth::id())->where('recorded', 'like', "$month-__")->orderBy('recorded')->get();
 
@@ -114,41 +123,11 @@ class MoodRecordController extends Controller
      * Merekam mood siswa pada hari ini dan akan mengembalikan status serta quotes
      */
     #[Group('Mood Record')]
-    public function store(MoodRecordSendRequest $request)
+    public function store(MoodRecordSendRequest $request, StoreMoodRecordAction $action)
     {
+        $result = $action->handle($request->validated());
 
-        $moodResponses = [
-            'Aman' => [
-                'Terima kasih sudah berbagi mood hari ini, semoga harimu semakin menyenangkan 🌸',
-                'Senang mendengar kamu merasa baik, terus jaga semangat positifmu ya ✨',
-                'Kamu luar biasa! Semoga energi positifmu menular ke sekitarmu 💡',
-                'Hebat, kamu sudah meluangkan waktu mengenali perasaanmu 🙌',
-                'Terus pertahankan mood baikmu, tapi ingat tidak apa-apa kalau suatu saat merasa berbeda 🌈',
-                'Bagus sekali! Kamu sudah menjaga diri dengan baik 🤍',
-                'Hari yang indah dimulai dari perasaan yang baik, semoga harimu penuh kebahagiaan 🌞',
-                'Kamu keren! Terus semangat untuk menjadi versi terbaik dari dirimu 💪',
-                'Terima kasih sudah jujur pada perasaanmu, itu tanda kamu peduli pada dirimu sendiri 🌼',
-                'Semoga rasa baikmu hari ini membawa kebaikan juga untuk orang-orang di sekitarmu 💖',
-            ],
-            'Tidak Aman' => [
-                'Terima kasih sudah jujur membagikan perasaanmu, ingat kamu tidak sendirian 🤗',
-                'Wajar kok merasa seperti itu, semoga segera ada hal baik yang membuatmu tenang 🌿',
-                'Perasaanmu penting. Jika ingin bercerita, ada teman atau guru yang siap mendengarkan 🤍',
-                'Kamu sudah hebat bisa mengenali perasaan ini, itu langkah awal untuk menjadi lebih kuat 💪',
-                'Tidak apa-apa merasa sedih atau marah, itu manusiawi. Yang penting jangan memendam sendiri 🌧️',
-                'Hari ini mungkin berat, tapi percayalah kamu bisa melewati ini 🌟',
-                'Perasaanmu valid. Jangan takut untuk mencari dukungan bila diperlukan 🫂',
-                'Kamu tidak harus selalu kuat sendirian, ada banyak orang yang peduli padamu 💌',
-                'Terima kasih sudah mau berbagi. Semoga esok lebih baik untukmu 🌅',
-                'Kamu berharga, apa pun mood-mu hari ini. Jangan lupa istirahat dan jaga dirimu 🌷',
-            ],
-        ];
-
-        MoodRecord::create($request->all());
-        $status = in_array($request->status, ['happy', 'neutral']) ? 'Aman' : 'Tidak Aman';
-        $message = $moodResponses[$status][array_rand($moodResponses[$status])];
-
-        return $this->created(['status' => $status, 'pesan' => $message], 'Success record mood');
+        return $this->created($result, 'Success record mood');
     }
 
     /**
@@ -161,7 +140,7 @@ class MoodRecordController extends Controller
     {
         Gate::authorize('dashboard-data');
 
-        if (Auth::user()->role == 'super') {
+        if (Auth::user()->role == UserRole::SUPER->value) {
             $moods = MoodRecord::selectRaw('MONTH(recorded) as month, status, COUNT(*) as total')
                 ->groupBy('month', 'status')
                 ->orderBy('month')
@@ -211,10 +190,10 @@ class MoodRecordController extends Controller
             ->pluck('total', 'status');
 
         return $this->success([
-            'neutral' => (int) ($moods['neutral'] ?? 0),
-            'sad' => (int) ($moods['sad'] ?? 0),
-            'happy' => (int) ($moods['happy'] ?? 0),
-            'angry' => (int) ($moods['angry'] ?? 0),
+            MoodStatus::NEUTRAL->value => (int) ($moods[MoodStatus::NEUTRAL->value] ?? 0),
+            MoodStatus::SAD->value => (int) ($moods[MoodStatus::SAD->value] ?? 0),
+            MoodStatus::HAPPY->value => (int) ($moods[MoodStatus::HAPPY->value] ?? 0),
+            MoodStatus::ANGRY->value => (int) ($moods[MoodStatus::ANGRY->value] ?? 0),
         ]);
     }
 
@@ -246,38 +225,28 @@ class MoodRecordController extends Controller
      * }
      */
     #[Group('Mood Record')]
-    public function moodHistory(Request $request, User $user, string $type)
-    {
+    public function moodHistory(
+        Request $request,
+        User $user,
+        string $type,
+        BuildMoodRecapAction $recapAction
+    ) {
         Gate::allowIf(function (User $authUser) use ($user) {
-            return ($authUser->role == 'counselor' && $authUser->id === $user->counselor_id) || ($authUser->role == 'teacher' && $authUser->id === $user->mentor_id) || $authUser->role == 'super';
+            return ($authUser->role == UserRole::COUNSELOR->value && $authUser->id === $user->counselor_id)
+                || ($authUser->role == UserRole::TEACHER->value && $authUser->id === $user->mentor_id)
+                || $authUser->role == UserRole::SUPER->value;
         });
-        // $request->validate(['type' => 'required|in:weekly,monthly']);
+
         $query = MoodRecord::where('user_id', $user->id);
 
         if ($type === 'monthly') {
-            // semua data dalam bulan ini
-            $query->whereMonth('recorded', now()->month)
-                ->whereYear('recorded', now()->year);
+            $query->whereMonth('recorded', now()->month)->whereYear('recorded', now()->year);
         } elseif ($type === 'weekly') {
-            // semua data dalam minggu ini
-            $query->whereBetween('recorded', [
-                now()->startOfWeek(),
-                now()->endOfWeek(),
-            ]);
+            $query->whereBetween('recorded', [now()->startOfWeek(), now()->endOfWeek()]);
         }
 
         $moods = $query->orderBy('recorded')->get();
-        // count by status
-        $recap = $moods
-            ->groupBy('status')
-            ->map(fn ($items) => $items->count());
-
-        // secure = neutral + happy
-        $secure = ($recap['neutral'] ?? 0) + ($recap['happy'] ?? 0);
-        $insecure = ($recap['angry'] ?? 0) + ($recap['sad'] ?? 0);
-
-        // tentukan mean status
-        $mean = $secure > $insecure ? 'secure' : 'insecure';
+        ['recap' => $recap, 'mean' => $mean] = $recapAction->handle($moods);
 
         return $this->success(compact('recap', 'mean', 'moods', 'user'));
     }
@@ -307,7 +276,7 @@ class MoodRecordController extends Controller
     public function getMoodTrendSchool(Request $request, School $school, string $type)
     {
         Gate::allowIf(function (User $authUser) {
-            return $authUser->role == 'super';
+            return $authUser->role == UserRole::SUPER->value;
         });
         $query = MoodRecord::whereIn('user_id', $school->students->pluck('id')->toArray());
 
@@ -350,13 +319,13 @@ class MoodRecordController extends Controller
     public function exportToday()
     {
         Gate::allowIf(function (User $user) {
-            return in_array($user->role, ['teacher', 'counselor']);
+            return in_array($user->role, [UserRole::TEACHER->value, UserRole::COUNSELOR->value]);
         });
-        if (Auth::user()->role == 'teacher') {
+        if (Auth::user()->role == UserRole::TEACHER->value) {
             // code...
-            $student = User::whereRole('student')->whereMentorId(Auth::id());
+            $student = User::whereRole(UserRole::STUDENT->value)->whereMentorId(Auth::id());
         } else {
-            $student = User::whereRole('student')->whereCounselorId(Auth::id());
+            $student = User::whereRole(UserRole::STUDENT->value)->whereCounselorId(Auth::id());
         }
         $moods = MoodRecord::with(['user', 'user.room'])->whereIn('user_id', $student->pluck('id'))->where('recorded', Carbon::today())->get()->map(function ($mood) {
             return [
@@ -364,9 +333,7 @@ class MoodRecordController extends Controller
                 'identifier' => $mood->user->identifier,
                 'room' => 'Kelas '.$mood->user->room->level.' '.$mood->user->room->name ?? null,
                 'status' => $mood->status,
-                'type' => in_array($mood->status, ['happy', 'neutral'])
-                    ? 'Aman'
-                    : 'Tidak Aman',
+                'type' => MoodStatus::from($mood->status)->label(),
             ];
         });
 
@@ -383,24 +350,21 @@ class MoodRecordController extends Controller
      * Mendapatkan laporan excel mood siswa minggu ini. bisa diakses oleh wali dan BK
      */
     #[Group('Export')]
-    public function exportWeekly(string $username)
+    public function exportWeekly(string $username, BuildMoodRecapAction $recapAction)
     {
-        Gate::allowIf(function (User $auth) {
-            return in_array($auth->role, ['teacher', 'counselor']);
-        });
-        $user = User::with(['room', 'counselor', 'mentor'])->whereUsername($username)->first();
-        $query = MoodRecord::where('user_id', $user->id)->whereBetween('recorded', [
-            now()->startOfWeek(),
-            now()->endOfWeek(),
-        ]);
+        Gate::allowIf(fn (User $auth) => in_array($auth->role, [
+            UserRole::TEACHER->value,
+            UserRole::COUNSELOR->value,
+        ]));
 
-        $moods = $query->orderBy('recorded')->get();
-        $recap = $moods
-            ->groupBy('status')
-            ->map(fn ($items) => $items->count());
-        $secure = ($recap['neutral'] ?? 0) + ($recap['happy'] ?? 0);
-        $insecure = ($recap['angry'] ?? 0) + ($recap['sad'] ?? 0);
-        $mean = $secure > $insecure ? 'secure' : 'insecure';
+        $user = User::with(['room', 'counselor', 'mentor'])->whereUsername($username)->first();
+        $moods = MoodRecord::where('user_id', $user->id)
+            ->whereBetween('recorded', [now()->startOfWeek(), now()->endOfWeek()])
+            ->orderBy('recorded')
+            ->get();
+
+        ['recap' => $recap, 'mean' => $mean] = $recapAction->handle($moods);
+
         $stud = [
             'name' => $user->name,
             'room' => 'Kelas '.$user->room->level.' '.$user->room->name,
@@ -408,13 +372,12 @@ class MoodRecordController extends Controller
             'mentor' => $user->mentor->name,
             'identifier' => $user->identifier,
         ];
+
         $data = compact('recap', 'mean', 'moods', 'stud');
         $fileName = 'exports/student-mood-'.now()->format('Ymd_His').'.xlsx';
         Excel::store(new StudentMoodExport($data), $fileName, 'public');
 
-        $url = Storage::disk('public')->url($fileName);
-
-        return $this->success(compact('url'));
+        return $this->success(['url' => Storage::disk('public')->url($fileName)]);
     }
 
     /**
@@ -423,22 +386,22 @@ class MoodRecordController extends Controller
      * Mendapatkan laporan excel mood siswa bulan ini. bisa diakses oleh wali dan BK
      */
     #[Group('Export')]
-    public function exportMonthly(string $username)
+    public function exportMonthly(string $username, BuildMoodRecapAction $recapAction)
     {
-        Gate::allowIf(function (User $auth) {
-            return in_array($auth->role, ['teacher', 'counselor']);
-        });
-        $user = User::with(['room', 'counselor', 'mentor'])->whereUsername($username)->first();
-        $query = MoodRecord::where('user_id', $user->id)->whereMonth('recorded', now()->month)
-            ->whereYear('recorded', now()->year);
+        Gate::allowIf(fn (User $auth) => in_array($auth->role, [
+            UserRole::TEACHER->value,
+            UserRole::COUNSELOR->value,
+        ]));
 
-        $moods = $query->orderBy('recorded')->get();
-        $recap = $moods
-            ->groupBy('status')
-            ->map(fn ($items) => $items->count());
-        $secure = ($recap['neutral'] ?? 0) + ($recap['happy'] ?? 0);
-        $insecure = ($recap['angry'] ?? 0) + ($recap['sad'] ?? 0);
-        $mean = $secure > $insecure ? 'secure' : 'insecure';
+        $user = User::with(['room', 'counselor', 'mentor'])->whereUsername($username)->first();
+        $moods = MoodRecord::where('user_id', $user->id)
+            ->whereMonth('recorded', now()->month)
+            ->whereYear('recorded', now()->year)
+            ->orderBy('recorded')
+            ->get();
+
+        ['recap' => $recap, 'mean' => $mean] = $recapAction->handle($moods);
+
         $stud = [
             'name' => $user->name,
             'room' => 'Kelas '.$user->room->level.' '.$user->room->name,
@@ -446,12 +409,11 @@ class MoodRecordController extends Controller
             'mentor' => $user->mentor->name,
             'identifier' => $user->identifier,
         ];
+
         $data = compact('recap', 'mean', 'moods', 'stud');
-        $fileName = 'exports/student-mood-monthly'.now()->format('Ymd_His').'.xlsx';
+        $fileName = 'exports/student-mood-monthly-'.now()->format('Ymd_His').'.xlsx';
         Excel::store(new StudentMoodExport($data), $fileName, 'public');
 
-        $url = Storage::disk('public')->url($fileName);
-
-        return $this->success(compact('url'));
+        return $this->success(['url' => Storage::disk('public')->url($fileName)]);
     }
 }

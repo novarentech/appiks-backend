@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -49,12 +50,12 @@ class User extends Authenticatable implements JWTSubject
 
     public function mentor()
     {
-        return $this->hasOne(User::class, 'id', 'mentor_id');
+        return $this->belongsTo(User::class, 'mentor_id');
     }
 
     public function counselor()
     {
-        return $this->hasOne(User::class, 'id', 'counselor_id');
+        return $this->belongsTo(User::class, 'counselor_id');
     }
 
     public function school()
@@ -64,12 +65,12 @@ class User extends Authenticatable implements JWTSubject
 
     public function counselored()
     {
-        return $this->hasMany(User::class, 'counselor_id', 'id')->where('role', 'student');
+        return $this->hasMany(User::class, 'counselor_id', 'id')->where('role', UserRole::STUDENT->value);
     }
 
     public function mentored()
     {
-        return $this->hasMany(User::class, 'mentor_id', 'id')->where('role', 'student');
+        return $this->hasMany(User::class, 'mentor_id', 'id')->where('role', UserRole::STUDENT->value);
     }
 
     public function sharing()
@@ -82,7 +83,7 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(Report::class);
     }
 
-    public function lastmood()
+    public function getLastMoodAttribute(): ?string
     {
         return $this->mood()->whereRecorded(now()->toDateString())->first()?->status;
     }

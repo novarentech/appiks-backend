@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\UserRole;
 use App\Models\Room;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
@@ -48,7 +49,7 @@ class CreateStudentRequest extends FormRequest
             'school_id' => Auth::user()->school_id,
             'verified' => false,
             'password' => Hash::make(config('app.default_password')),
-            'role' => 'student',
+            'role' => UserRole::STUDENT->value,
         ]);
     }
 }
