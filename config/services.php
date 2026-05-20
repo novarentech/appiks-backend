@@ -39,4 +39,9 @@ return [
         'key' => env('YOUTUBE_API_KEY'),
     ],
 
+    'nlp' => [
+        'url' => env('NLP_SERVICE_URL'),
+        'key' => env('NLP_SERVICE_API_KEY'),
+    ],
+
 ];
