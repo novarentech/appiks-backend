@@ -123,8 +123,7 @@ class MoodRecordController extends Controller
     #[Group('Mood Record')]
     public function store(MoodRecordSendRequest $request, StoreMoodRecordAction $action)
     {
-        Gate::authorize('store', MoodRecord::class);
-        $result = $action->handle($request->validated());
+        $result = $action->handle($request->all());
 
         return $this->created($result, 'Success record mood');
     }

@@ -139,7 +139,7 @@ class VideoController extends Controller
         $data = $request->safe()->except(['tags']);
         
         $video = Video::create(array_merge($data, $meta));
-        $video->tags()->sync($request->validated()['tags'] ?? []);
+        $video->tags()->sync($request->all()['tags'] ?? []);
         
         $res = Video::with(['school', 'tags'])->find($video->id);
 

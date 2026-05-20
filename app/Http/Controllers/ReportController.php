@@ -70,7 +70,7 @@ class ReportController extends Controller
     #[Group('Report')]
     public function store(CreateReportRequest $request)
     {
-        $report = Report::create($request->validated());
+        $report = Report::create($request->all());
         ReportCreated::dispatch($report);
 
         return $this->created(new ReportResource($report));
@@ -107,7 +107,7 @@ class ReportController extends Controller
     #[Group('Report')]
     public function confirm(ConfirmReportRequest $request, Report $report)
     {
-        $report->update($request->validated());
+        $report->update($request->all());
 
         return $this->created(new ReportResource($report));
     }
@@ -118,7 +118,7 @@ class ReportController extends Controller
     #[Group('Report')]
     public function reschedule(RescheduleReportRequest $request, Report $report)
     {
-        $report->update($request->validated());
+        $report->update($request->all());
 
         return $this->created(new ReportResource($report));
     }
