@@ -28,9 +28,9 @@ class SharingController extends Controller
     {
         $user = Auth::user();
         if ($user->role == UserRole::STUDENT->value) {
-            $sharings = $user->sharing()->with(['user'])->orderBy('replied_at')->get();
+            $sharings = $user->sharing()->with(['user', 'nlp'])->orderBy('replied_at')->get();
         } elseif ($user->role == UserRole::COUNSELOR->value) {
-            $sharings = Sharing::with(['user', 'user.room'])->whereIn('user_id', $user->counselored->pluck('id'))->get();
+            $sharings = Sharing::with(['user', 'user.room', 'nlp'])->whereIn('user_id', $user->counselored->pluck('id'))->get();
         } else {
             $sharings = collect();
         }
@@ -71,7 +71,7 @@ class SharingController extends Controller
     {
         $sharing = Sharing::create($request->all());
 
-        return $this->created(new SharingResource($sharing));
+        return $this->created(new SharingResource($sharing->load('nlp')));
     }
 
     /**
@@ -84,7 +84,7 @@ class SharingController extends Controller
     {
         Gate::authorize('view', $sharing);
 
-        return $this->success(new SharingResource($sharing));
+        return $this->success(new SharingResource($sharing->load('nlp')));
     }
 
     /**
@@ -96,7 +96,7 @@ class SharingController extends Controller
     public function sharingOfStudent(User $user)
     {
         Gate::authorize('viewStudentSharing', [Sharing::class, $user]);
-        $sharings = Sharing::whereUserId($user->id)->get();
+        $sharings = Sharing::whereUserId($user->id)->with('nlp')->get();
 
         return $this->success(SharingResource::collection($sharings));
     }
@@ -111,7 +111,7 @@ class SharingController extends Controller
     {
         $sharing->update($request->all());
 
-        return $this->success(new SharingResource($sharing));
+        return $this->success(new SharingResource($sharing->load('nlp')));
     }
 
     /**
@@ -121,7 +121,7 @@ class SharingController extends Controller
     public function latestOfStudent()
     {
         Gate::authorize('create', Sharing::class);
-        $sharings = Sharing::whereUserId(Auth::id())->latest()->take(2)->get();
+        $sharings = Sharing::whereUserId(Auth::id())->with('nlp')->latest()->take(2)->get();
 
         return $this->success(SharingResource::collection($sharings));
     }
