@@ -24,7 +24,7 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class MoodRecordController extends Controller
 {
-    use ApiResponder, AuthorizesRequests;
+    use ApiResponder;
 
     /**
      * Is user can record today's mood
