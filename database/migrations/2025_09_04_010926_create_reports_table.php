@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ReportStatus;
 use App\Models\User;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -20,7 +21,7 @@ return new class extends Migration
             $table->string('room');
             $table->date('date');
             $table->string('time');
-            $table->enum('status', ['menunggu', 'selesai', 'dibatalkan', 'disetujui', 'dijadwalkan'])->default('menunggu');
+            $table->enum('status', ReportStatus::cases())->default(ReportStatus::MENUNGGU);
             $table->enum('priority', ['tinggi', 'rendah']);
             $table->text('notes')->nullable();
             $table->text('result')->nullable();

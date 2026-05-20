@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\MoodStatus;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -18,7 +19,7 @@ class MoodRecordFactory extends Factory
     {
         return [
             'user_id' => fake()->randomNumber(),
-            'status' => fake()->randomElement(['happy', 'sad', 'angry', 'neutral']),
+            'status' => fake()->randomElement(MoodStatus::cases()),
             'recorded' => fake()->date(),
         ];
     }

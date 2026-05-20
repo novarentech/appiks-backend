@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\ReportStatus;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -22,7 +23,7 @@ class ReportFactory extends Factory
             'topic' => fake()->sentence(4),
             'date' => fake()->date(),
             'time' => fake()->time('H:i'),
-            'status' => fake()->randomElement(['menunggu', 'selesai', 'dibatalkan', 'disetujui', 'dijadwalkan']),
+            'status' => fake()->randomElement(ReportStatus::cases()),
             'priority' => fake()->randomElement(['tinggi', 'rendah']),
             'notes' => fake()->sentence(10),
             'result' => fake()->sentence(10),

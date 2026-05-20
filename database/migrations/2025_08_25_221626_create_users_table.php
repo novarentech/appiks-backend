@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\UserRole;
 use App\Models\Room;
 use App\Models\School;
 use App\Models\User;
@@ -22,7 +23,7 @@ return new class extends Migration {
             $table->string('identifier')->unique();
             $table->string('password')->default(Hash::make(config('app.default_password')));
             $table->boolean('verified')->default(false);
-            $table->enum('role', ['super', 'admin', 'teacher', 'student', 'counselor', 'headteacher'])->default('student');
+            $table->enum('role', UserRole::cases())->default('student');
             $table->foreignIdFor(User::class, 'mentor_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignIdFor(User::class, 'counselor_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignIdFor(Room::class)->nullable()->constrained()->onDelete('cascade');

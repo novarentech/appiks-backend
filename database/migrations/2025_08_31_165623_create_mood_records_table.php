@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\MoodStatus;
 use App\Models\User;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -16,7 +17,7 @@ return new class extends Migration
             $table->id();
             $table->foreignIdFor(User::class)->constrained()->onDelete('cascade');
             $table->date('recorded');
-            $table->enum('status', ['happy', 'sad', 'angry', 'neutral']);
+            $table->enum('status', MoodStatus::cases());
             $table->timestamps();
             $table->unique(['recorded', 'user_id']);
         });

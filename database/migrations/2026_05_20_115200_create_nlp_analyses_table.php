@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\NlpAnalysisStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -16,7 +17,7 @@ return new class extends Migration
             $table->text('text');
             $table->json('response')->nullable();
             $table->string('flag')->nullable();
-            $table->string('status')->nullable();
+            $table->enum('status', NlpAnalysisStatus::cases())->nullable();
             $table->nullableMorphs('nlpable');
             $table->timestamps();
             $table->softDeletes();
