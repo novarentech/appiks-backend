@@ -24,7 +24,7 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class MoodRecordController extends Controller
 {
-    use ApiResponder;
+    use ApiResponder, AuthorizesRequests;
 
     /**
      * Is user can record today's mood
@@ -109,7 +109,7 @@ class MoodRecordController extends Controller
     #[Group('Mood Record')]
     public function recapPerMonth(string $month)
     {
-        $this->authorize('recapPerMonth', MoodRecord::class);
+        Gate::authorize('recapPerMonth', MoodRecord::class);
         $mood = MoodRecord::where('user_id', Auth::id())->where('recorded', 'like', "$month-__")->orderBy('recorded')->get();
 
         return $this->success(MoodRecordResource::collection($mood));
@@ -123,7 +123,7 @@ class MoodRecordController extends Controller
     #[Group('Mood Record')]
     public function store(MoodRecordSendRequest $request, StoreMoodRecordAction $action)
     {
-        $this->authorize('store', MoodRecord::class);
+        Gate::authorize('store', MoodRecord::class);
         $result = $action->handle($request->validated());
 
         return $this->created($result, 'Success record mood');
@@ -137,7 +137,7 @@ class MoodRecordController extends Controller
     #[Group('Mood Record')]
     public function getMoodTrend()
     {
-        $this->authorize('viewSchoolTrend', MoodRecord::class);
+        Gate::authorize('viewSchoolTrend', MoodRecord::class);
 
         $moods = MoodRecord::selectRaw('MONTH(recorded) as month, status, COUNT(*) as total')
             ->groupBy('month', 'status')
@@ -219,7 +219,7 @@ class MoodRecordController extends Controller
         string $type,
         BuildMoodRecapAction $recapAction
     ) {
-        $this->authorize('viewHistory', [MoodRecord::class, $user]);
+        Gate::authorize('viewHistory', [MoodRecord::class, $user]);
 
         $query = MoodRecord::where('user_id', $user->id);
 
@@ -259,7 +259,7 @@ class MoodRecordController extends Controller
     #[Group('Mood Record')]
     public function getMoodTrendSchool(Request $request, School $school, string $type)
     {
-        $this->authorize('viewSchoolTrend', MoodRecord::class);
+        Gate::authorize('viewSchoolTrend', MoodRecord::class);
         $query = MoodRecord::whereIn('user_id', $school->students->pluck('id')->toArray());
 
         if ($type === 'monthly') {
@@ -300,7 +300,7 @@ class MoodRecordController extends Controller
     #[Group('Export')]
     public function exportToday()
     {
-        $this->authorize('export', MoodRecord::class);
+        Gate::authorize('export', MoodRecord::class);
 
         if (Auth::user()->role == UserRole::TEACHER->value) {
             $student = User::whereRole(UserRole::STUDENT->value)->whereMentorId(Auth::id());
@@ -333,7 +333,7 @@ class MoodRecordController extends Controller
     #[Group('Export')]
     public function exportWeekly(string $username, BuildMoodRecapAction $recapAction)
     {
-        $this->authorize('export', MoodRecord::class);
+        Gate::authorize('export', MoodRecord::class);
 
         $user = User::with(['room', 'counselor', 'mentor'])->whereUsername($username)->first();
         $moods = MoodRecord::where('user_id', $user->id)
@@ -366,7 +366,7 @@ class MoodRecordController extends Controller
     #[Group('Export')]
     public function exportMonthly(string $username, BuildMoodRecapAction $recapAction)
     {
-        $this->authorize('export', MoodRecord::class);
+        Gate::authorize('export', MoodRecord::class);
 
         $user = User::with(['room', 'counselor', 'mentor'])->whereUsername($username)->first();
         $moods = MoodRecord::where('user_id', $user->id)

@@ -46,7 +46,7 @@ class SharingController extends Controller
     #[Group('Sharing')]
     public function getSharingCount()
     {
-        $this->authorize('viewGraph', Sharing::class);
+        Gate::authorize('viewGraph', Sharing::class);
         $user = Auth::user();
         $sharings = Sharing::whereDate('created_at', Carbon::today())
             ->whereIn('user_id', $user->counselored->pluck('id'));
@@ -82,7 +82,7 @@ class SharingController extends Controller
     #[Group('Sharing')]
     public function show(Sharing $sharing)
     {
-        $this->authorize('view', $sharing);
+        Gate::authorize('view', $sharing);
 
         return $this->success(new SharingResource($sharing));
     }
@@ -95,7 +95,7 @@ class SharingController extends Controller
     #[Group('Sharing')]
     public function sharingOfStudent(User $user)
     {
-        $this->authorize('viewStudentSharing', [Sharing::class, $user]);
+        Gate::authorize('viewStudentSharing', [Sharing::class, $user]);
         $sharings = Sharing::whereUserId($user->id)->get();
 
         return $this->success(SharingResource::collection($sharings));
@@ -120,7 +120,7 @@ class SharingController extends Controller
     #[Group('Notification')]
     public function latestOfStudent()
     {
-        $this->authorize('create', Sharing::class);
+        Gate::authorize('create', Sharing::class);
         $sharings = Sharing::whereUserId(Auth::id())->latest()->take(2)->get();
 
         return $this->success(SharingResource::collection($sharings));

@@ -50,7 +50,7 @@ class ReportController extends Controller
     #[Group('Report')]
     public function getReportCount()
     {
-        $this->authorize('viewGraph', Report::class);
+        Gate::authorize('viewGraph', Report::class);
         $user = Auth::user();
         $reports = Report::whereCreatedAt(Carbon::today())->whereIn('user_id', $user->counselored->pluck('id'))->get();
 
@@ -95,7 +95,7 @@ class ReportController extends Controller
     #[Group('Report')]
     public function reportOfStudent(User $user)
     {
-        $this->authorize('viewStudentReports', [Report::class, $user]);
+        Gate::authorize('viewStudentReports', [Report::class, $user]);
         $reports = Report::with('counselor')->whereUserId($user->id)->get();
 
         return $this->created(ReportResource::collection($reports));
@@ -158,7 +158,7 @@ class ReportController extends Controller
     #[Group('Dashboard')]
     public function getReportGraph()
     {
-        $this->authorize('viewGraph', Report::class);
+        Gate::authorize('viewGraph', Report::class);
         $report = Report::whereIn('user_id', Auth::user()->counselored->pluck('id'))
             ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
             ->groupBy('month')
@@ -183,7 +183,7 @@ class ReportController extends Controller
     #[Group('Notification')]
     public function latestOfStudent()
     {
-        $this->authorize('viewLatest', Report::class);
+        Gate::authorize('viewLatest', Report::class);
         $reports = Report::with(['counselor'])->whereUserId(Auth::id())->latest()->take(2)->get();
 
         return $this->success(ReportResource::collection($reports));
