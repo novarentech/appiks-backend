@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\ReportStatus;
 use App\Models\Report;
 use App\Models\Sharing;
 use Illuminate\Console\Command;
@@ -30,8 +31,8 @@ class ClearCutdown extends Command
     {
         try {
             DB::beginTransaction();
-            Sharing::where('cutdown_for_report','<',now())->update(['cutdown_for_report'=>null]);
-            Report::where('cutdown_for_report','<',now())->update(['cutdown_for_report'=>null]);
+            Sharing::where('cutdown_for_report', '<', now())->update(['cutdown_for_report' => null, 'priority' => 'rendah']);
+            Report::where('cutdown_for_report', '<', now())->update(['cutdown_for_report' => null]);
             DB::commit();
             $this->info('Cutdown cleared successfully');
         } catch (\Exception $e) {
