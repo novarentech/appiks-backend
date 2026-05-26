@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CounselingController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\LocationController;
@@ -105,6 +106,7 @@ Route::middleware('auth:api')->group(function () {
     Route::apiResource('quote', QuoteController::class)->except(['update']);
     Route::apiResource('mood_record', MoodRecordController::class)->except(['destroy', 'update']);
     Route::apiResource('school', SchoolController::class);
+    Route::apiResource('counseling', CounselingController::class)->only(['store', 'show']);
     Route::prefix('dashboard')->group(function () {
         Route::get('sharing-count', [SharingController::class, 'getSharingCount']);
         Route::get('report-count', [ReportController::class, 'getReportCount']);
