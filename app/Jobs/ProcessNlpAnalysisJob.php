@@ -14,6 +14,12 @@ class ProcessNlpAnalysisJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    protected array $zoneMapping = [
+        'Red Zone' => 'tinggi',
+        'Yellow Zone' => 'sedang',
+        'No Trigger' => 'rendah',
+    ];
+
     /**
      * Create a new job instance.
      */
@@ -29,6 +35,11 @@ class ProcessNlpAnalysisJob implements ShouldQueue
         $this->nlpAnalysis->update([
             'response' => $response,
             'flag' => $response['zone_status'] ?? null,
+        ]);
+
+        $this->nlpAnalysis->nlpable()?->update([
+            'cutdown_for_report' => now()->addHours(48),
+            'priority' => $this->zoneMapping[$response['zone_status']],
         ]);
     }
 }

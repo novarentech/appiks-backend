@@ -18,6 +18,7 @@ return new class extends Migration
             $table->json('response')->nullable();
             $table->string('flag')->nullable();
             $table->enum('status', NlpAnalysisStatus::cases())->nullable();
+            $table->string('reason')->nullable();
             $table->nullableMorphs('nlpable');
             $table->timestamps();
             $table->softDeletes();
