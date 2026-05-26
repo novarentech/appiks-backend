@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\NlpAnalysisStatus;
+use App\Enums\ReportStatus;
 use App\Enums\UserRole;
 use App\Http\Requests\CreateSharingRequest;
 use App\Http\Requests\ReplySharingRequest;
@@ -15,6 +17,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Dedoc\Scramble\Attributes\ExcludeAllRoutesFromDocs;
 use Dedoc\Scramble\Attributes\ExcludeRouteFromDocs;
+use Illuminate\Http\Request;
 
 class SharingController extends Controller
 {
@@ -115,6 +118,29 @@ class SharingController extends Controller
     public function reply(ReplySharingRequest $request, Sharing $sharing)
     {
         $sharing->update($request->all());
+
+        return $this->success(new SharingResource($sharing->load('nlp')));
+    }
+
+    /**
+     * Sign false positive
+     *
+     * Menandai curhatan sebagai false positive dan hanya bisa dilakukan oleh Guru BK siswa tersebut
+     */
+    #[Group('Sharing')]
+    public function falsePositive(Request $request, Sharing $sharing)
+    {
+        Gate::authorize('falsePositive', $sharing);
+        $request->validate(['reason'=>['string','max:255','required']]);
+        $sharing->update([
+            'priority' => 'rendah',
+            'status' => ReportStatus::DIJADWALKAN->value,
+            'cutdown_for_report' => null
+        ]);
+        $sharing->nlp()->update([
+            'status' => NlpAnalysisStatus::FALSE_POSITIVE->value,
+            'reason' => $request->reason,
+        ]);
 
         return $this->success(new SharingResource($sharing->load('nlp')));
     }

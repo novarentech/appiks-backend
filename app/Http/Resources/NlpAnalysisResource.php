@@ -42,6 +42,7 @@ class NlpAnalysisResource extends JsonResource
                     ->all(),
             ],
 
+            'reason' => $this->reason,
             'flag' => $this->flag,
             'status' => $this->status?->value,
             'created_at' => $this->created_at,

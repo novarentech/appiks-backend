@@ -75,6 +75,7 @@ Route::middleware('auth:api')->group(function () {
         Route::delete('user/{user:username}', 'destroy');
     });
     Route::controller(SharingController::class)->group(function () {
+        Route::patch('sharing/false-positive/{sharing}', 'falsePositive');
         Route::patch('sharing/reply/{sharing}', 'reply');
         Route::post('sharing', 'store');
         Route::get('sharing', 'index');
