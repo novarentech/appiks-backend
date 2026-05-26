@@ -21,7 +21,10 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
+use Dedoc\Scramble\Attributes\ExcludeAllRoutesFromDocs;
+use Dedoc\Scramble\Attributes\ExcludeRouteFromDocs;
 
+#[ExcludeAllRoutesFromDocs]
 class MoodRecordController extends Controller
 {
     use ApiResponder;

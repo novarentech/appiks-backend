@@ -9,6 +9,8 @@ use App\Models\User;
 use App\Traits\ApiResponder;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Support\Facades\Auth;
+use Dedoc\Scramble\Attributes\ExcludeAllRoutesFromDocs;
+use Dedoc\Scramble\Attributes\ExcludeRouteFromDocs;
 
 class AuthController extends Controller
 {
@@ -35,6 +37,7 @@ class AuthController extends Controller
      * Get the autheticated user profile
      */
     #[Group('User')]
+    #[ExcludeRouteFromDocs]
     public function me()
     {
         $user = Auth::user();
@@ -62,6 +65,7 @@ class AuthController extends Controller
      * Mendapatkan refresh token apabila token JWT sudah expired (max 2 jam setelah login pertama)
      */
     #[Group('Authentication')]
+    #[ExcludeRouteFromDocs]
     public function refresh()
     {
         $token = Auth::refresh();
@@ -79,6 +83,7 @@ class AuthController extends Controller
      * Is username used
      */
     #[Group('User')]
+    #[ExcludeRouteFromDocs]
     public function checkUsername(CheckUsernameRequest $request)
     {
         return $this->success(['username' => true], 'Username not exist');

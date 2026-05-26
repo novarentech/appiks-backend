@@ -13,6 +13,8 @@ use Carbon\Carbon;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Dedoc\Scramble\Attributes\ExcludeAllRoutesFromDocs;
+use Dedoc\Scramble\Attributes\ExcludeRouteFromDocs;
 
 class SharingController extends Controller
 {
@@ -44,6 +46,7 @@ class SharingController extends Controller
      * Mendapatkan jumlah curhatan hari itu berdasarkan tipe. Hanya bisa diakses oleh BK
      */
     #[Group('Sharing')]
+    #[ExcludeRouteFromDocs]
     public function getSharingCount()
     {
         Gate::authorize('viewGraph', Sharing::class);
@@ -93,6 +96,7 @@ class SharingController extends Controller
      * Mendapatkan semua curhatan siswa. Hanya bisa diakses oleh super admin
      */
     #[Group('Sharing')]
+    #[ExcludeRouteFromDocs]
     public function sharingOfStudent(User $user)
     {
         Gate::authorize('viewStudentSharing', [Sharing::class, $user]);
@@ -107,6 +111,7 @@ class SharingController extends Controller
      * Membalas curhatan siswa dan hanya bisa dilakukan oleh Guru BK siswa tersebut
      */
     #[Group('Sharing')]
+    #[ExcludeRouteFromDocs]
     public function reply(ReplySharingRequest $request, Sharing $sharing)
     {
         $sharing->update($request->all());
@@ -118,6 +123,7 @@ class SharingController extends Controller
      * Get latest 2 sharing
      */
     #[Group('Notification')]
+    #[ExcludeRouteFromDocs]
     public function latestOfStudent()
     {
         Gate::authorize('create', Sharing::class);

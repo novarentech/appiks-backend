@@ -21,7 +21,10 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Facades\Excel;
+use Dedoc\Scramble\Attributes\ExcludeAllRoutesFromDocs;
+use Dedoc\Scramble\Attributes\ExcludeRouteFromDocs;
 
+#[ExcludeAllRoutesFromDocs]
 class UserController extends Controller
 {
     use ApiResponder;

@@ -10,7 +10,10 @@ use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Dedoc\Scramble\Attributes\ExcludeAllRoutesFromDocs;
+use Dedoc\Scramble\Attributes\ExcludeRouteFromDocs;
 
+#[ExcludeAllRoutesFromDocs]
 class GameController extends Controller
 {
     use ApiResponder;

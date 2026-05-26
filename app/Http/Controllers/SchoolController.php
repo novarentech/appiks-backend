@@ -9,7 +9,10 @@ use App\Traits\ApiResponder;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Dedoc\Scramble\Attributes\ExcludeAllRoutesFromDocs;
+use Dedoc\Scramble\Attributes\ExcludeRouteFromDocs;
 
+#[ExcludeAllRoutesFromDocs]
 class SchoolController extends Controller
 {
     use ApiResponder;

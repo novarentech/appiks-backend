@@ -12,7 +12,10 @@ use App\Traits\ApiResponder;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Dedoc\Scramble\Attributes\ExcludeAllRoutesFromDocs;
+use Dedoc\Scramble\Attributes\ExcludeRouteFromDocs;
 
+#[ExcludeAllRoutesFromDocs]
 class QuoteController extends Controller
 {
     use ApiResponder;

@@ -17,7 +17,10 @@ use Carbon\Carbon;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Dedoc\Scramble\Attributes\ExcludeAllRoutesFromDocs;
+use Dedoc\Scramble\Attributes\ExcludeRouteFromDocs;
 
+#[ExcludeAllRoutesFromDocs]
 class ReportController extends Controller
 {
     use ApiResponder;

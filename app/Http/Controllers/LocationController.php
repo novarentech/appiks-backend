@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Location;
 use App\Traits\ApiResponder;
 use Dedoc\Scramble\Attributes\Group;
+use Dedoc\Scramble\Attributes\ExcludeAllRoutesFromDocs;
+use Dedoc\Scramble\Attributes\ExcludeRouteFromDocs;
 
+#[ExcludeAllRoutesFromDocs]
 class LocationController extends Controller
 {
     use ApiResponder;
