@@ -97,4 +97,9 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->hasOne(Cloud::class);
     }
+
+    public function psychologistProfile()
+    {
+        return $this->hasOne(PsychologistProfile::class);
+    }
 }

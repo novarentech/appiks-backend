@@ -10,4 +10,5 @@ enum UserRole: string
     case TEACHER = 'teacher';
     case COUNSELOR = 'counselor';
     case STUDENT = 'student';
+    case PSYCHOLOGIST = 'psychologist';
 }

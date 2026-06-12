@@ -17,6 +17,7 @@ use App\Http\Controllers\SharingController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VideoController;
+use App\Http\Controllers\PsychologistController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('coba', [QuestionnaireController::class, 'coba']);
@@ -109,6 +110,10 @@ Route::middleware('auth:api')->group(function () {
     Route::apiResource('school', SchoolController::class);
     Route::apiResource('counseling', CounselingController::class)->only(['store', 'show']);
     Route::post('counseling-logs', [CounselingController::class, 'storeLog']);
+    Route::prefix('admin')->group(function () {
+        Route::patch('psychologists/{psychologist}/toggle', [PsychologistController::class, 'toggleStatus']);
+        Route::apiResource('psychologists', PsychologistController::class);
+    });
     Route::prefix('dashboard')->group(function () {
         Route::get('sharing-count', [SharingController::class, 'getSharingCount']);
         Route::get('report-count', [ReportController::class, 'getReportCount']);
