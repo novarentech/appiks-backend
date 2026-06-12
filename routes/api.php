@@ -89,6 +89,7 @@ Route::middleware('auth:api')->group(function () {
         Route::patch('report/cancel/{report}', 'cancel');
         Route::patch('report/reschedule/{report}', 'reschedule');
         Route::post('report', 'store');
+        Route::post('report/{report}/schedule-meeting', 'scheduleMeeting');
         Route::get('report/student/{user:username}', 'reportOfStudent');
         Route::get('report', 'index');
         Route::get('report/{report}', 'show');
@@ -107,6 +108,7 @@ Route::middleware('auth:api')->group(function () {
     Route::apiResource('mood_record', MoodRecordController::class)->except(['destroy', 'update']);
     Route::apiResource('school', SchoolController::class);
     Route::apiResource('counseling', CounselingController::class)->only(['store', 'show']);
+    Route::post('counseling-logs', [CounselingController::class, 'storeLog']);
     Route::prefix('dashboard')->group(function () {
         Route::get('sharing-count', [SharingController::class, 'getSharingCount']);
         Route::get('report-count', [ReportController::class, 'getReportCount']);

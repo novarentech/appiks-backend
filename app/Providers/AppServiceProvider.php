@@ -8,9 +8,11 @@ use App\Events\ReportCreated;
 use App\Listeners\RotateGeminiToken;
 use App\Listeners\UpdateRelatedSharingPriority;
 use App\Models\Cloud;
+use App\Models\CounselingLog;
 use App\Models\Sharing;
 use App\Models\User;
 use App\Observers\CloudObserver;
+use App\Observers\CounselingLogObserver;
 use App\Observers\SharingObserver;
 use App\Observers\UserObserver;
 use Dedoc\Scramble\Scramble;
@@ -57,5 +59,6 @@ class AppServiceProvider extends ServiceProvider
         User::observe(UserObserver::class);
         Cloud::observe(CloudObserver::class);
         Sharing::observe(SharingObserver::class);
+        CounselingLog::observe(CounselingLogObserver::class);
     }
 }

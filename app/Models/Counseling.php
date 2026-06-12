@@ -20,6 +20,14 @@ class Counseling extends Model
         return $this->belongsTo(User::class,'counselor_id');
     }
 
+    public function report(){
+        return $this->belongsTo(Report::class, 'report_id');
+    }
+
+    public function logs(){
+        return $this->hasMany(CounselingLog::class, 'counseling_id');
+    }
+
     protected function casts(){
         return [
             'resolution' => CounselingResolution::class,

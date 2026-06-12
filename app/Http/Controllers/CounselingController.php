@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\StoreCounselingLogAction;
+use App\Enums\CounselingMethod;
+use App\Enums\CounselingResolution;
 use App\Enums\UserRole;
 use App\Http\Requests\CreateCounselingRequest;
 use App\Http\Resources\CounselingResource;
@@ -10,6 +13,8 @@ use App\Traits\ApiResponder;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 
 class CounselingController extends Controller
 {
@@ -37,5 +42,26 @@ class CounselingController extends Controller
     public function show(Counseling $counseling){
         $counseling->load(['student','counselor']);
         return $this->success(new CounselingResource($counseling));
+    }
+
+    /**
+     * Store counseling clinical log outcome
+     */
+    #[Group('Counseling')]
+    public function storeLog(Request $request, StoreCounselingLogAction $action)
+    {
+        $validated = $request->validate([
+            'counseling_id' => 'required|integer|exists:counselings,id',
+            'session_mode' => ['required', 'string', Rule::enum(CounselingMethod::class)],
+            'clinical_notes' => 'required|string',
+            'resolution_status' => ['required', 'string', Rule::enum(CounselingResolution::class)],
+        ]);
+
+        $counseling = Counseling::findOrFail($validated['counseling_id']);
+        Gate::authorize('storeLog', $counseling);
+
+        $log = $action->handle($validated);
+
+        return $this->success($log);
     }
 }

@@ -23,4 +23,9 @@ class Report extends Model
     {
         return $this->belongsTo(User::class, 'counselor_id', 'id');
     }
+
+    public function counselings()
+    {
+        return $this->hasMany(Counseling::class, 'report_id');
+    }
 }

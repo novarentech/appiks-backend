@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\ScheduleReportCounselingAction;
 use App\Enums\ReportStatus;
 use App\Enums\UserRole;
 use App\Events\ReportCreated;
@@ -9,8 +10,10 @@ use App\Http\Requests\CloseReportRequest;
 use App\Http\Requests\ConfirmReportRequest;
 use App\Http\Requests\CreateReportRequest;
 use App\Http\Requests\RescheduleReportRequest;
+use App\Http\Resources\CounselingResource;
 use App\Http\Resources\ReportResource;
 use App\Models\Report;
+use App\Models\Sharing;
 use App\Models\User;
 use App\Traits\ApiResponder;
 use Carbon\Carbon;
@@ -168,7 +171,7 @@ class ReportController extends Controller
             ->orderBy('month')
             ->pluck('total', 'month');
 
-        $sharing = \App\Models\Sharing::whereIn('user_id', Auth::user()->counselored->pluck('id'))
+        $sharing = Sharing::whereIn('user_id', Auth::user()->counselored->pluck('id'))
             ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
             ->groupBy('month')
             ->orderBy('month')
@@ -190,5 +193,25 @@ class ReportController extends Controller
         $reports = Report::with(['counselor'])->whereUserId(Auth::id())->latest()->take(2)->get();
 
         return $this->success(ReportResource::collection($reports));
+    }
+
+    /**
+     * Schedule a meeting from a report
+     */
+    #[Group('Report')]
+    public function scheduleMeeting(Request $request, Report $report, ScheduleReportCounselingAction $action)
+    {
+        Gate::authorize('scheduleMeeting', $report);
+
+        $validated = $request->validate([
+            'proposed_date' => 'required|date_format:Y-m-d',
+            'proposed_time' => 'required|date_format:H:i',
+            'room' => 'nullable|string|max:255',
+            'notes' => 'nullable|string',
+        ]);
+
+        $counseling = $action->handle($report, $validated);
+
+        return $this->success(new CounselingResource($counseling));
     }
 }

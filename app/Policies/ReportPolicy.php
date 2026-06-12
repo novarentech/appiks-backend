@@ -58,4 +58,15 @@ class ReportPolicy
     {
         return $authUser->role === UserRole::STUDENT->value;
     }
+
+    /**
+     * Determine whether the user can schedule a meeting from the report.
+     */
+    public function scheduleMeeting(User $user, Report $report): bool
+    {
+        return $user->role === UserRole::SUPER->value
+            || $user->role === UserRole::ADMIN->value
+            || $user->role === UserRole::HEADTEACHER->value
+            || ($user->role === UserRole::COUNSELOR->value && $report->user->counselor_id == $user->id);
+    }
 }
