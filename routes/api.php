@@ -18,6 +18,8 @@ use App\Http\Controllers\TagController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VideoController;
 use App\Http\Controllers\PsychologistController;
+use App\Http\Controllers\StudentDashboardController;
+use App\Http\Controllers\StudentConsentController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('coba', [QuestionnaireController::class, 'coba']);
@@ -110,6 +112,7 @@ Route::middleware('auth:api')->group(function () {
     Route::apiResource('school', SchoolController::class);
     Route::apiResource('counseling', CounselingController::class)->only(['store', 'show']);
     Route::post('counseling-logs', [CounselingController::class, 'storeLog']);
+    Route::post('counseling/{counseling}/consent', [CounselingController::class, 'sendConsent']);
     Route::prefix('admin')->group(function () {
         Route::patch('psychologists/{psychologist}/toggle', [PsychologistController::class, 'toggleStatus']);
         Route::apiResource('psychologists', PsychologistController::class);
@@ -147,5 +150,13 @@ Route::middleware('auth:api')->group(function () {
     Route::prefix('notification')->group(function () {
         Route::get('latest-sharing', [SharingController::class, 'latestOfStudent']);
         Route::get('latest-report', [ReportController::class, 'latestOfStudent']);
+    });
+
+    // Student digital consent & dashboard routes
+    Route::prefix('student')->group(function () {
+        Route::get('dashboard/widgets', [StudentDashboardController::class, 'getWidgets']);
+        Route::get('counselings', [StudentDashboardController::class, 'getCounselings']);
+        Route::get('counselings/{counseling}/consent', [StudentConsentController::class, 'show']);
+        Route::patch('consents/{consent}', [StudentConsentController::class, 'update']);
     });
 });

@@ -33,7 +33,8 @@ To run this project successfully, ensure the following environment variables are
 ### 🧠 Mental Health & Wellness
 - **Mood Ecosystem**: Advanced mood tracking with streaks, trends, and history patterns (Weekly/Monthly).
 - **Self-Help Suite**: Integrated journaling (Daily & Gratitude), Grounding Techniques, and Sensory Relaxation tools.
-- **AI Integration**: Powered by **Google Gemini AI** for analyzing student input and providing intelligent emotional feedback.
+- **Digital Consent (Granular)**: Data-sharing permissions system allowing students to control individual access scopes with automated PII sanitization.
+- **AI Integration**: Powered by **Google Gemini AI** for analyzing student input and generating background clinical reports.
 - **Educational Content**: Management of therapeutic videos, articles, and mood-synced inspirational quotes.
 
 ### 📊 Institutional Analytics
@@ -43,7 +44,8 @@ To run this project successfully, ensure the following environment variables are
 - **Sharing Platform**: A safe space for student expressions with moderation and reply capabilities.
 
 ### 🛡️ Core Infrastructure
-- **Role-Based Access Control (RBAC)**: Secure multi-role architecture (Student, Teacher, Counselor, Admin, Super Admin).
+- **Role-Based Access Control (RBAC)**: Secure multi-role architecture (Student, Teacher, Counselor, Admin, Psychologist, Super Admin).
+- **Partner Psychologist Referral**: Standardized mappings to connect school counseling coordinates directly to external professional psychologists.
 - **JWT Authentication**: Robust stateless authentication for mobile and web frontends.
 - **Automated Documentation**: Live API documentation powered by **Dedoc Scramble**.
 - **Data Operations**: Bulk user management and record exports via Excel (`maatwebsite/excel`).

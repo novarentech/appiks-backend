@@ -28,6 +28,22 @@ class Counseling extends Model
         return $this->hasMany(CounselingLog::class, 'counseling_id');
     }
 
+    public function consents(){
+        return $this->hasMany(CounselingConsent::class, 'counseling_id');
+    }
+
+    public function latestConsent(){
+        return $this->hasOne(CounselingConsent::class, 'counseling_id')->latestOfMany();
+    }
+
+    public function clinicalSummary(){
+        return $this->hasOne(ClinicalSummary::class, 'counseling_id');
+    }
+
+    public function psychologist(){
+        return $this->belongsTo(User::class, 'psychologist_id');
+    }
+
     protected function casts(){
         return [
             'resolution' => CounselingResolution::class,

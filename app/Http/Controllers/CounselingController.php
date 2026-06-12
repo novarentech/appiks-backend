@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\StoreCounselingLogAction;
 use App\Enums\CounselingMethod;
 use App\Enums\CounselingResolution;
+use App\Enums\ConsentStatus;
 use App\Enums\UserRole;
 use App\Http\Requests\CreateCounselingRequest;
 use App\Http\Resources\CounselingResource;
@@ -12,6 +13,7 @@ use App\Models\Counseling;
 use App\Traits\ApiResponder;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
@@ -63,5 +65,21 @@ class CounselingController extends Controller
         $log = $action->handle($validated);
 
         return $this->success($log);
+    }
+
+    /**
+     * Re-send or manually create a digital consent request for a counseling session.
+     */
+    #[Group('Counseling')]
+    public function sendConsent(Counseling $counseling): JsonResponse
+    {
+        // Only the counselor assigned to this session is authorized
+        Gate::authorize('storeLog', $counseling);
+
+        $consent = $counseling->consents()->create([
+            'status' => ConsentStatus::PENDING,
+        ]);
+
+        return $this->created($consent, 'Digital consent request initiated successfully.');
     }
 }
