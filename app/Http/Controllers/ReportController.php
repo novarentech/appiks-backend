@@ -23,7 +23,6 @@ use Illuminate\Support\Facades\Gate;
 use Dedoc\Scramble\Attributes\ExcludeAllRoutesFromDocs;
 use Dedoc\Scramble\Attributes\ExcludeRouteFromDocs;
 
-#[ExcludeAllRoutesFromDocs]
 class ReportController extends Controller
 {
     use ApiResponder;
@@ -34,6 +33,7 @@ class ReportController extends Controller
      * Get latest reports data belongs to student for student or belongs to all student of counselored for counselor
      */
     #[Group('Report')]
+    #[ExcludeRouteFromDocs]
     public function index()
     {
         $user = Auth::user();
@@ -54,6 +54,7 @@ class ReportController extends Controller
      * Mendapatkan data jumlah konseling berdasarkan tipenya
      */
     #[Group('Report')]
+    #[ExcludeRouteFromDocs]
     public function getReportCount()
     {
         Gate::authorize('viewGraph', Report::class);
@@ -74,6 +75,7 @@ class ReportController extends Controller
      * Create new report
      */
     #[Group('Report')]
+    #[ExcludeRouteFromDocs]
     public function store(CreateReportRequest $request)
     {
         $report = Report::create($request->all());
@@ -86,6 +88,7 @@ class ReportController extends Controller
      * Get report detail
      */
     #[Group('Report')]
+    #[ExcludeRouteFromDocs]
     public function show(Report $report)
     {
         Gate::authorize('view', $report);
@@ -99,6 +102,7 @@ class ReportController extends Controller
      * Mendapatkan semua konseling seorang siswa. Hanya bisa diakses oleh Super Admin
      */
     #[Group('Report')]
+    #[ExcludeRouteFromDocs]
     public function reportOfStudent(User $user)
     {
         Gate::authorize('viewStudentReports', [Report::class, $user]);
@@ -111,6 +115,7 @@ class ReportController extends Controller
      * Confirm report meeting
      */
     #[Group('Report')]
+    #[ExcludeRouteFromDocs]
     public function confirm(ConfirmReportRequest $request, Report $report)
     {
         $report->update($request->all());
@@ -122,6 +127,7 @@ class ReportController extends Controller
      * Reschedule report meeting
      */
     #[Group('Report')]
+    #[ExcludeRouteFromDocs]
     public function reschedule(RescheduleReportRequest $request, Report $report)
     {
         $report->update($request->all());
@@ -133,6 +139,7 @@ class ReportController extends Controller
      * Finish report meeting
      */
     #[Group('Report')]
+    #[ExcludeRouteFromDocs]
     public function close(CloseReportRequest $request, Report $report)
     {
         $report->update(['result' => $request->result, 'status' => ReportStatus::SELESAI->value]);
@@ -144,6 +151,7 @@ class ReportController extends Controller
      * Cancel report meeting
      */
     #[Group('Report')]
+    #[ExcludeRouteFromDocs]
     public function cancel(CloseReportRequest $request, Report $report)
     {
         $report->update(['result' => $request->result, 'status' => ReportStatus::DIBATALKAN->value]);
@@ -162,6 +170,7 @@ class ReportController extends Controller
      * }
      */
     #[Group('Dashboard')]
+    #[ExcludeRouteFromDocs]
     public function getReportGraph()
     {
         Gate::authorize('viewGraph', Report::class);
@@ -187,6 +196,7 @@ class ReportController extends Controller
      * Get latest 2 report
      */
     #[Group('Notification')]
+    #[ExcludeRouteFromDocs]
     public function latestOfStudent()
     {
         Gate::authorize('viewLatest', Report::class);
