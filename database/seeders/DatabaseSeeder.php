@@ -28,6 +28,8 @@ class DatabaseSeeder extends Seeder
             SharingSeeder::class,
             QuotesSeeder::class,
             SelfHelpSeeder::class,
+            PsychologistSeeder::class,
+            PsychologistSlotSeeder::class,
         ]);
     }
 }

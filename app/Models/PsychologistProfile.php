@@ -19,6 +19,19 @@ class PsychologistProfile extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function slots()
+    {
+        return $this->hasMany(PsychologistSlot::class, 'psychologist_id');
+    }
+
+    public function availableSlots()
+    {
+        return $this->hasMany(PsychologistSlot::class, 'psychologist_id')
+                    ->available()
+                    ->upcoming();
+    }
+
+
     protected function casts(): array
     {
         return [
