@@ -36,6 +36,11 @@ class PsychologistSlot extends Model
         return $query->whereDate('slot_date', '>=', now()->toDateString());
     }
 
+    public function bookingSchedule()
+    {
+        return $this->hasOne(BookingSchedule::class, 'slot_id');
+    }
+
     protected function casts(): array
     {
         return [

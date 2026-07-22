@@ -19,4 +19,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->renderable(new NotFound);
         $exceptions->renderable(new NotAccept);
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\ConflictHttpException $e, $request) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                ], 409);
+            }
+        });
     })->create();

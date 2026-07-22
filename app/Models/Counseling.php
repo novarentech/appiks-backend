@@ -5,9 +5,12 @@ namespace App\Models;
 use App\Enums\CounselingResolution;
 use App\Enums\CounselingStatus;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Counseling extends Model
 {
+    use SoftDeletes;
+
     protected $guarded = [];
     protected $hidden = ['deleted_at'];
     protected $table = 'counselings';
@@ -42,6 +45,11 @@ class Counseling extends Model
 
     public function psychologist(){
         return $this->belongsTo(User::class, 'psychologist_id');
+    }
+
+    public function bookingSchedule()
+    {
+        return $this->hasOne(BookingSchedule::class, 'counseling_id');
     }
 
     protected function casts(){

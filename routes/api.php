@@ -20,6 +20,7 @@ use App\Http\Controllers\VideoController;
 use App\Http\Controllers\PsychologistController;
 use App\Http\Controllers\StudentDashboardController;
 use App\Http\Controllers\StudentConsentController;
+use App\Http\Controllers\StudentBookingController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('coba', [QuestionnaireController::class, 'coba']);
@@ -158,5 +159,11 @@ Route::middleware('auth:api')->group(function () {
         Route::get('counselings', [StudentDashboardController::class, 'getCounselings']);
         Route::get('counselings/{counseling}/consent', [StudentConsentController::class, 'show']);
         Route::patch('consents/{consent}', [StudentConsentController::class, 'update']);
+
+        // Booking slot browsing & submission (AND-2)
+        Route::get('referrals/{counseling}/available-dates', [StudentBookingController::class, 'availableDates']);
+        Route::get('referrals/{counseling}/available-slots', [StudentBookingController::class, 'availableSlots']);
+        Route::post('bookings', [StudentBookingController::class, 'store']);
+        Route::get('bookings/{booking}', [StudentBookingController::class, 'show']);
     });
 });
