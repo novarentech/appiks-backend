@@ -82,6 +82,7 @@ Route::middleware('auth:api')->group(function () {
     Route::controller(SharingController::class)->group(function () {
         Route::patch('sharing/false-positive/{sharing}', 'falsePositive');
         Route::patch('sharing/reply/{sharing}', 'reply');
+        Route::patch('sharing/acknowledge/{sharing}', 'acknowledge');
         Route::post('sharing', 'store');
         Route::get('sharing', 'index');
         Route::get('sharing/student/{user:username}', 'sharingOfStudent');
@@ -158,6 +159,7 @@ Route::middleware('auth:api')->group(function () {
         Route::get('dashboard/widgets', [StudentDashboardController::class, 'getWidgets']);
         Route::get('counselings', [StudentDashboardController::class, 'getCounselings']);
         Route::get('counselings/{counseling}/consent', [StudentConsentController::class, 'show']);
+        Route::patch('counselings/{counseling}/acknowledge', [CounselingController::class, 'acknowledge']);
         Route::patch('consents/{consent}', [StudentConsentController::class, 'update']);
 
         // Booking slot browsing & submission (AND-2)

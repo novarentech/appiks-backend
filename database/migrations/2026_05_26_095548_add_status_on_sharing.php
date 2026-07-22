@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('sharings', function (Blueprint $table) {
-            $table->enum('status', ReportStatus::cases())->after('priority')->default(ReportStatus::MENUNGGU->value);
+            $table->enum('status', ReportStatus::cases())->after('priority')->default(ReportStatus::MENUNGGU_TINJAUAN->value);
         });
     }
 

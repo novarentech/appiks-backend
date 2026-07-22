@@ -17,6 +17,7 @@ class SharingResource extends JsonResource
         return array_merge(parent::toArray($request), [
             'user' => new UserResource($this->whenLoaded('user')),
             'nlp' => new NlpAnalysisResource($this->whenLoaded('nlp')),
+            'counseling' => new CounselingResource($this->whenLoaded('counseling')),
         ]);
     }
 }

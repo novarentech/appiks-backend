@@ -77,7 +77,7 @@ class SharingController extends Controller
     {
         $sharing = Sharing::create($request->all());
 
-        return $this->created(new SharingResource($sharing->load('nlp')));
+        return $this->created(new SharingResource($sharing->load(['nlp', 'counseling'])));
     }
 
     /**
@@ -90,7 +90,7 @@ class SharingController extends Controller
     {
         Gate::authorize('view', $sharing);
 
-        return $this->success(new SharingResource($sharing->load('nlp')));
+        return $this->success(new SharingResource($sharing->load(['nlp', 'counseling'])));
     }
 
     /**
@@ -103,7 +103,7 @@ class SharingController extends Controller
     public function sharingOfStudent(User $user)
     {
         Gate::authorize('viewStudentSharing', [Sharing::class, $user]);
-        $sharings = Sharing::whereUserId($user->id)->with('nlp')->get();
+        $sharings = Sharing::whereUserId($user->id)->with(['nlp', 'counseling'])->get();
 
         return $this->success(SharingResource::collection($sharings));
     }
@@ -114,12 +114,24 @@ class SharingController extends Controller
      * Membalas curhatan siswa dan hanya bisa dilakukan oleh Guru BK siswa tersebut
      */
     #[Group('Sharing')]
-    #[ExcludeRouteFromDocs]
     public function reply(ReplySharingRequest $request, Sharing $sharing)
     {
         $sharing->update($request->all());
 
-        return $this->success(new SharingResource($sharing->load('nlp')));
+        return $this->success(new SharingResource($sharing->load(['nlp', 'counseling'])));
+    }
+
+    /**
+     * Acknowledge the sharing
+     *
+     * Meninjau curhatan siswa dan hanya bisa dilakukan oleh Guru BK siswa tersebut
+     */
+    #[Group('Sharing')]
+    public function acknowledge(Sharing $sharing)
+    {
+        $sharing->update(['status' => ReportStatus::DITINJAU->value]);
+
+        return $this->success(new SharingResource($sharing->load(['nlp', 'counseling'])));
     }
 
     /**
@@ -134,7 +146,7 @@ class SharingController extends Controller
         $request->validate(['reason'=>['string','max:255','required']]);
         $sharing->update([
             'priority' => 'rendah',
-            'status' => ReportStatus::DIJADWALKAN->value,
+            'status' => ReportStatus::SELESAI->value,
             'cutdown_for_report' => null
         ]);
         $sharing->nlp()->update([
@@ -142,7 +154,7 @@ class SharingController extends Controller
             'reason' => $request->reason,
         ]);
 
-        return $this->success(new SharingResource($sharing->load('nlp')));
+        return $this->success(new SharingResource($sharing->load(['nlp', 'counseling'])));
     }
 
     /**
@@ -153,7 +165,7 @@ class SharingController extends Controller
     public function latestOfStudent()
     {
         Gate::authorize('create', Sharing::class);
-        $sharings = Sharing::whereUserId(Auth::id())->with('nlp')->latest()->take(2)->get();
+        $sharings = Sharing::whereUserId(Auth::id())->with(['nlp', 'counseling'])->latest()->take(2)->get();
 
         return $this->success(SharingResource::collection($sharings));
     }

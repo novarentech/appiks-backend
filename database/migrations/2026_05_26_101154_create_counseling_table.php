@@ -4,6 +4,7 @@ use App\Enums\CounselingMethod;
 use App\Enums\CounselingResolution;
 use App\Enums\CounselingStatus;
 use App\Enums\ReportStatus;
+use App\Models\Sharing;
 use App\Models\User;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -20,6 +21,7 @@ return new class extends Migration
             $table->id();
             $table->foreignIdFor(User::class, 'student_id');
             $table->foreignIdFor(User::class, 'counselor_id');
+            $table->foreignIdFor(Sharing::class);
             $table->string('room')->nullable();
             $table->string('notes')->nullable();
             $table->string('reason')->nullable();

@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Actions\CallNlpAction;
+use App\Enums\ReportStatus;
 use App\Models\NlpAnalysis;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -41,5 +42,11 @@ class ProcessNlpAnalysisJob implements ShouldQueue
             'cutdown_for_report' => now()->addHours(48),
             'priority' => $this->zoneMapping[$response['zone_status']],
         ]);
+
+        if ($response['zone_status'] == 'No Trigger') {
+            $this->nlpAnalysis->nlpable()?->update([
+                'status' => ReportStatus::MENUNGGU_TANGGAPAN->value,
+            ]);
+        }
     }
 }

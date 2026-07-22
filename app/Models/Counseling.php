@@ -47,6 +47,10 @@ class Counseling extends Model
         return $this->belongsTo(User::class, 'psychologist_id');
     }
 
+    public function sharing(){
+        return $this->belongsTo(Sharing::class, 'sharing_id');
+    }
+
     public function bookingSchedule()
     {
         return $this->hasOne(BookingSchedule::class, 'counseling_id');

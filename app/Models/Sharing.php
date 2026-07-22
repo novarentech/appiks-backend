@@ -20,6 +20,11 @@ class Sharing extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function counseling()
+    {
+        return $this->hasOne(Counseling::class);
+    }
+
     /**
      * Get the sharing's NLP analysis.
      */

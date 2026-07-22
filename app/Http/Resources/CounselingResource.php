@@ -17,6 +17,7 @@ class CounselingResource extends JsonResource
         return array_merge(parent::toArray($request), [
             'student' => new UserResource($this->whenLoaded('student')),
             'counselor' => new UserResource($this->whenLoaded('counselor')),
+            'sharing' => new SharingResource($this->whenLoaded('sharing')),
         ]);
     }
 }

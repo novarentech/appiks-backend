@@ -36,6 +36,12 @@ class CreateCounselingRequest extends FormRequest
             'time' => Rule::date()->format('H:i'),
             'student_id' => 'required|integer|exists:users,id',
             'counselor_id' => 'nullable|integer|exists:users,id',
+            'sharing_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('sharings', 'id')
+                    ->where(fn($query) => $query->where('user_id', $this->student_id)),
+            ],
             'room' => 'required_without:counselor_id|string|max:255',
             'notes' => 'nullable|string|max:255',
             'reason' => 'required_with:counselor_id|string|max:255',
@@ -46,7 +52,7 @@ class CreateCounselingRequest extends FormRequest
     protected function passedValidation(){
         $this->merge(['scheduled_at'=>$this->date.' '.$this->time, 'status'=>CounselingStatus::MENUNGGU->value]);
         
-        if ($this->counselor_id) {
+        if ($this->psychologist_id) {
             $this->merge(['type' => 'external']);
         } else {
             $this->merge(['type' => 'internal','counselor_id'=>Auth::user()->id]);

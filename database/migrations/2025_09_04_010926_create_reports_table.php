@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('room');
             $table->date('date');
             $table->string('time');
-            $table->enum('status', ReportStatus::cases())->default(ReportStatus::MENUNGGU);
+            $table->enum('status', ReportStatus::cases())->default(ReportStatus::MENUNGGU_TINJAUAN);
             $table->enum('priority', ['tinggi', 'rendah']);
             $table->text('notes')->nullable();
             $table->text('result')->nullable();

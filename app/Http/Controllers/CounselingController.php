@@ -6,6 +6,8 @@ use App\Actions\StoreCounselingLogAction;
 use App\Enums\CounselingMethod;
 use App\Enums\CounselingResolution;
 use App\Enums\ConsentStatus;
+use App\Enums\CounselingStatus;
+use App\Enums\ReportStatus;
 use App\Enums\UserRole;
 use App\Http\Requests\CreateCounselingRequest;
 use App\Http\Resources\CounselingResource;
@@ -43,6 +45,30 @@ class CounselingController extends Controller
     #[Group('Counseling')]
     public function show(Counseling $counseling){
         $counseling->load(['student','counselor']);
+        return $this->success(new CounselingResource($counseling));
+    }
+    
+    /**
+     * Acknowledge counseling request
+     *
+     * Menyetujui jadwal permintaan konseling (pov siswa)
+     */
+    #[Group('Counseling')]
+    public function acknowledge(Request $request, Counseling $counseling){
+        $request->validate([
+            'type' => 'required|string|in:accept,decline'
+        ]);
+        if ($request->type === 'accept'){
+            $counseling->update([
+                'status' => CounselingStatus::DIJADWALKAN->value
+            ]);
+            $counseling->sharing->update(['status'=>ReportStatus::DIJADWALKAN->value]);
+        }else{
+            $counseling->update([
+                'status' => CounselingStatus::DITOLAK->value
+            ]);
+            $counseling->sharing->update(['status'=>ReportStatus::DITOLAK->value]);
+        }
         return $this->success(new CounselingResource($counseling));
     }
 
