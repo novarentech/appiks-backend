@@ -27,13 +27,21 @@ class CreateCounselingRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'date' => 'required|date_format:Y-m-d',
+            'date' => [
+                'required_without:psychologist_id',
+                'nullable',
+                'date_format:Y-m-d',
+            ],
             /**
              * @var string
              *
              * @example 10:10
              */
-            'time' => Rule::date()->format('H:i'),
+            'time' => [
+                'required_without:psychologist_id',
+                'nullable',
+                Rule::date()->format('H:i'),
+            ],
             'student_id' => 'required|integer|exists:users,id',
             'counselor_id' => 'nullable|integer|exists:users,id',
             'sharing_id' => [
