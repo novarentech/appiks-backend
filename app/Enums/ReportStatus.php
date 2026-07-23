@@ -12,4 +12,5 @@ enum ReportStatus: string
     case SELESAI               = 'Diselesaikan';
     case DIBATALKAN            = 'Dibatalkan';
     case DITOLAK             = 'Jadwal Ditolak Siswa';
+    case BUKAN_URGENT       = 'Bukan Urgent';
 }
