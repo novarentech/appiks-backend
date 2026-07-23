@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Enums\UserRole;
 use App\Models\PsychologistProfile;
+use App\Models\School;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -33,6 +34,7 @@ class PsychologistSeeder extends Seeder
             'role'       => UserRole::PSYCHOLOGIST->value,
             'password'   => Hash::make(config('app.default_password')),
             'verified'   => true,
+            'school_id'  => 1
         ]);
 
         PsychologistProfile::create([
