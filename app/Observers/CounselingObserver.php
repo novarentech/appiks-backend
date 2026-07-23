@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Enums\ConsentStatus;
+use App\Enums\ReportStatus;
 use App\Models\Counseling;
 
 class CounselingObserver
@@ -19,6 +20,11 @@ class CounselingObserver
         if ($counseling->type === 'external') {
             $counseling->consents()->create([
                 'status' => ConsentStatus::PENDING,
+            ]);
+        }
+        if($counseling->sharing_id != null){
+            $counseling->sharing->update([
+                'status'=> ReportStatus::MENUNGGU_PERSETUJUAN->value
             ]);
         }
     }
