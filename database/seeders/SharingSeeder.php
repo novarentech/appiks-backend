@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\ReportStatus;
 use App\Models\Sharing;
 use App\Models\User;
 use Carbon\Carbon;
@@ -16,10 +17,13 @@ class SharingSeeder extends Seeder
     public function run(): void
     {
         $students = User::where('role', 'student')->get();
+        $statuses = ReportStatus::cases();
+        $statusCount = count($statuses);
         $all = [];
+        $index = 0;
 
         foreach ($students as $student) {
-            // 5 tanggal unik acak dalam 30 hari terakhir
+            // 3 tanggal unik acak dalam 35 hari terakhir
             $dates = collect(range(0, 35))
                 ->map(fn($i) => Carbon::yesterday()->subDays($i))
                 ->shuffle()
@@ -27,24 +31,33 @@ class SharingSeeder extends Seeder
                 ->values();
 
             foreach ($dates as $date) {
-                // buat raw data dari factory
                 $attrs = Sharing::factory()->raw();
+                $currentStatus = $statuses[$index % $statusCount];
+                $index++;
 
-                // tentukan secara random apakah "filled" atau "empty"
-                if (rand(0, 1)) {
-                    // filled
-                    $attrs['user_id'] = $student->id;
-                    $attrs['created_at'] = Carbon::parse($date)->format('Y-m-d H:i:s');
-                    $attrs['updated_at'] = Carbon::parse($date)->format('Y-m-d H:i:s');
+                $attrs['user_id'] = $student->id;
+                $attrs['status']  = $currentStatus->value;
+
+                // Determine if reply should be present based on status
+                $hasReply = in_array($currentStatus, [
+                    ReportStatus::DITINJAU,
+                    ReportStatus::MENUNGGU_PERSETUJUAN,
+                    ReportStatus::DIJADWALKAN,
+                    ReportStatus::SELESAI,
+                    ReportStatus::DITOLAK,
+                ]);
+
+                if ($hasReply) {
+                    $attrs['replied_at'] = Carbon::parse($date)->format('Y-m-d');
+                    $attrs['replied_by'] = $student->counselor?->name ?? 'Guru BK';
                 } else {
-                    // empty
-                    $attrs['reply'] = null;
+                    $attrs['reply']      = null;
                     $attrs['replied_at'] = null;
-                    $attrs['replied_by'] = $student->counselor->name;
-                    $attrs['user_id'] = $student->id;
-                    $attrs['created_at'] = Carbon::parse($date)->format('Y-m-d H:i:s');
-                    $attrs['updated_at'] = Carbon::parse($date)->format('Y-m-d H:i:s');
+                    $attrs['replied_by'] = null;
                 }
+
+                $attrs['created_at'] = Carbon::parse($date)->format('Y-m-d H:i:s');
+                $attrs['updated_at'] = Carbon::parse($date)->format('Y-m-d H:i:s');
 
                 $all[] = $attrs;
             }
