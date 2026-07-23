@@ -52,7 +52,7 @@ class CreateCounselingRequest extends FormRequest
             ],
             'room' => 'required_without:counselor_id|string|max:255',
             'notes' => 'nullable|string|max:255',
-            'reason' => 'required_with:counselor_id|string|max:255',
+            'reason' => 'required_with:psychologist_id|string|max:255',
             'psychologist_id' => 'nullable|integer|exists:users,id',
         ];
     }   
