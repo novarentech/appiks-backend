@@ -154,7 +154,6 @@ class SharingController extends Controller
             'status' => NlpAnalysisStatus::FALSE_POSITIVE->value,
             'reason' => $request->reason,
         ]);
-        $sharing->counseling()->update(['resolution'=> CounselingResolution::NOTPRIORITY->value] );
 
         return $this->success(new SharingResource($sharing->load(['nlp', 'counseling'])));
     }
