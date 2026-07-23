@@ -50,6 +50,11 @@ class School extends Model
         return $this->hasMany(User::class)->where('role', UserRole::STUDENT->value);
     }
 
+    public function psycologist()
+    {
+        return $this->hasMany(User::class)->where('role', UserRole::PSYCHOLOGIST->value);
+    }
+
     public function videos()
     {
         return $this->hasMany(Video::class);
