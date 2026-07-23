@@ -143,7 +143,7 @@ Route::middleware('auth:api')->group(function () {
             Route::get('student', 'getStudents');
             Route::get('users', 'getUsers');
             Route::get('users/{username}', 'getUserDetail');
-            Route::get('users/type/{type}', 'getUsersByType')->whereIn('type', ['student', 'teacher', 'counselor', 'headteacher', 'admin']);
+            Route::get('users/type/{type}', 'getUsersByType')->whereIn('type', ['student', 'teacher', 'counselor', 'headteacher', 'admin','psychologist']);
             Route::get('latest-user', 'getLatestUser');
             Route::get('today-user', 'getTodayUser');
             Route::post('users', 'store');

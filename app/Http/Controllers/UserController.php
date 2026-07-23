@@ -141,7 +141,6 @@ class UserController extends Controller
         if (Auth::user()->role == UserRole::SUPER->value) {
             $users = User::with('school')->whereRole($type)->get();
         } else {
-            
             $users = User::whereRole($type)->whereSchoolId(Auth::user()->school_id)->get();
         }
         
