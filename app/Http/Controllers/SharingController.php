@@ -33,7 +33,7 @@ class SharingController extends Controller
     {
         $user = Auth::user();
         if ($user->role == UserRole::STUDENT->value) {
-            $sharings = $user->sharing()->with(['user', 'nlp'])->orderBy('replied_at')->get();
+            $sharings = $user->sharing()->with(['user', 'nlp','counseling'])->orderBy('replied_at')->get();
         } elseif ($user->role == UserRole::COUNSELOR->value) {
             $sharings = Sharing::with(['user', 'user.room', 'nlp'])->whereIn('user_id', $user->counselored->pluck('id'))->get();
         } else {

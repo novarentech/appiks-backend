@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\MoodStatus;
 use App\Enums\UserRole;
 use App\Models\Article;
+use App\Models\Counseling;
 use App\Models\MoodRecord;
 use App\Models\Quote;
 use App\Models\Report;

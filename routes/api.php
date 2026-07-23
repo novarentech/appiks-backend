@@ -22,6 +22,7 @@ use App\Http\Controllers\StudentDashboardController;
 use App\Http\Controllers\StudentConsentController;
 use App\Http\Controllers\StudentBookingController;
 use Illuminate\Support\Facades\Route;
+use SebastianBergmann\CodeCoverage\Report\Html\Dashboard;
 
 Route::get('coba', [QuestionnaireController::class, 'coba']);
 Route::get('/', function () {
@@ -112,7 +113,7 @@ Route::middleware('auth:api')->group(function () {
     Route::apiResource('quote', QuoteController::class)->except(['update']);
     Route::apiResource('mood_record', MoodRecordController::class)->except(['destroy', 'update']);
     Route::apiResource('school', SchoolController::class);
-    Route::apiResource('counseling', CounselingController::class)->only(['store', 'show']);
+    Route::apiResource('counseling', CounselingController::class)->only(['store', 'show','index']);
     Route::post('counseling-logs', [CounselingController::class, 'storeLog']);
     Route::post('counseling/{counseling}/consent', [CounselingController::class, 'sendConsent']);
     Route::prefix('admin')->group(function () {
