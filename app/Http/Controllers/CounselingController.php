@@ -31,14 +31,13 @@ class CounselingController extends Controller
      */
     #[Group('Counseling')]
     public function index(Request $request){
+        $type = $request->filled('type') ? $request->type : 'internal';
         if (Auth::user()->role != UserRole::STUDENT->value) {
             return $this->error('Only student can access this endpoint',403);
         }
         $counselings = Counseling::with(['student', 'counselor', 'sharing'])
             ->where('student_id', Auth::id())
-            ->when($request->filled('type'), function ($query) use ($request) {
-                $query->where('type', $request->query('type'));
-            })
+            ->where('type', $type)
             ->get();
         return $this->success(CounselingResource::collection($counselings));
     }
