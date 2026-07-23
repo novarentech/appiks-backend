@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\ReportStatus;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
 
@@ -35,6 +36,7 @@ class ReplySharingRequest extends FormRequest
                 'reply' => $this->text,
                 'replied_at' => now()->toDateString(),
                 'replied_by' => auth()->user()->name,
+                'status'=> ReportStatus::SELESAI->value
             ]
         ));
     }
