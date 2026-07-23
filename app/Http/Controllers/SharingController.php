@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CounselingResolution;
 use App\Enums\NlpAnalysisStatus;
 use App\Enums\ReportStatus;
 use App\Enums\UserRole;
@@ -153,6 +154,7 @@ class SharingController extends Controller
             'status' => NlpAnalysisStatus::FALSE_POSITIVE->value,
             'reason' => $request->reason,
         ]);
+        $sharing->counseling()->update(['resolution'=> CounselingResolution::NOTPRIORITY->value] );
 
         return $this->success(new SharingResource($sharing->load(['nlp', 'counseling'])));
     }
