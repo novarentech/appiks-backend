@@ -50,7 +50,7 @@ class CreateCounselingRequest extends FormRequest
                 Rule::exists('sharings', 'id')
                     ->where(fn($query) => $query->where('user_id', $this->student_id)),
             ],
-            'room' => 'required_without:counselor_id|nullable|string|max:255',
+            'room' => 'nullable|string|max:255',
             'notes' => 'nullable|string|max:255',
             'reason' => 'required_with:psychologist_id|string|max:255',
             'psychologist_id' => 'nullable|integer|exists:users,id',
