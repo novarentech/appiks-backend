@@ -20,6 +20,9 @@ class DemoCaseSeeder extends Seeder
     public function run()
     {
         $password = Hash::make('password');
+        $this->call([
+            SchoolSeeder::class
+        ]);
 User::factory()->create([
             'username' => 'super',
             'verified' => true,
