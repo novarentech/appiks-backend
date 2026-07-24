@@ -20,7 +20,16 @@ class DemoCaseSeeder extends Seeder
     public function run()
     {
         $password = Hash::make('password');
-
+User::factory()->create([
+            'username' => 'super',
+            'verified' => true,
+            'role' => UserRole::SUPER->value,
+            'counselor_id' => null,
+            'mentor_id' => null,
+            'room_id' => null,
+            'school_id' => null,
+        ]);
+        
         // 1-5 Guru BK
         $counselors = [];
         for ($i = 1; $i <= 5; $i++) {
@@ -113,5 +122,9 @@ class DemoCaseSeeder extends Seeder
                 'flag' => 'Red',
             ]);
         }
+        $this->call([
+            PsychologistSeeder::class,
+            PsychologistSlotSeeder::class,
+        ]);
     }
 }
