@@ -35,6 +35,7 @@ User::factory()->create([
         for ($i = 1; $i <= 5; $i++) {
             $counselors[$i] = User::create([
                 'name' => "Guru BK 0{$i}",
+'verified'=>true,
                 'username' => "bk0{$i}",
                 'identifier' => "BK" . str_pad($i, 4, '0', STR_PAD_LEFT),
                 'password' => $password,
@@ -48,6 +49,7 @@ User::factory()->create([
             $students[$i] = User::create([
                 'name' => "Siswa 0{$i}",
                 'username' => "siswa0{$i}",
+'verified'=>true,
                 'identifier' => "SW" . str_pad($i, 4, '0', STR_PAD_LEFT),
                 'password' => $password,
                 'role' => UserRole::STUDENT->value,
@@ -59,6 +61,7 @@ User::factory()->create([
         $bkDemo = User::create([
             'name' => "Guru BK Demo",
             'username' => "bkdemo",
+'verified'=>true,
             'identifier' => "BK9999",
             'password' => $password,
             'role' => UserRole::COUNSELOR->value,
@@ -68,6 +71,7 @@ User::factory()->create([
         $siswaDemo = User::create([
             'name' => "Siswa Demo",
             'username' => "siswademo",
+'verified'=>true,
             'identifier' => "SW9999",
             'password' => $password,
             'role' => UserRole::STUDENT->value,
