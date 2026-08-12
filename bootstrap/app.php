@@ -27,4 +27,12 @@ return Application::configure(basePath: dirname(__DIR__))
                 ], 409);
             }
         });
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException $e, $request) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                ], 422);
+            }
+        });
     })->create();

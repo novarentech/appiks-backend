@@ -49,6 +49,7 @@ class AppServiceProvider extends ServiceProvider
             return $user->role != UserRole::STUDENT->value;
         });
         Gate::policy(\App\Models\PsychologistProfile::class, \App\Policies\PsychologistPolicy::class);
+        Gate::policy(\App\Models\PsychologistSlot::class, \App\Policies\PsychologistSlotPolicy::class);
 
         Event::listen(
             ReportCreated::class,

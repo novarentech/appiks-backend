@@ -45,7 +45,7 @@ To run this project successfully, ensure the following environment variables are
 
 ### 🛡️ Core Infrastructure
 - **Role-Based Access Control (RBAC)**: Secure multi-role architecture (Student, Teacher, Counselor, Admin, Psychologist, Super Admin).
-- **Partner Psychologist Referral**: Standardized mappings to connect school counseling coordinates directly to external professional psychologists.
+- **Partner Psychologist Referral & Schedule**: Standardized mappings for school referrals and schedule slot management (publication, overlap prevention, safe deletion) for external professional psychologists.
 - **JWT Authentication**: Robust stateless authentication for mobile and web frontends.
 - **Automated Documentation**: Live API documentation powered by **Dedoc Scramble**.
 - **Data Operations**: Bulk user management and record exports via Excel (`maatwebsite/excel`).

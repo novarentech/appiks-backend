@@ -169,4 +169,11 @@ Route::middleware('auth:api')->group(function () {
         Route::post('bookings', [StudentBookingController::class, 'store']);
         Route::get('bookings/{booking}', [StudentBookingController::class, 'show']);
     });
+
+    // Psychologist schedule management (AND-13)
+    Route::prefix('psychologist')->group(function () {
+        Route::get('slots', [App\Http\Controllers\PsychologistSlotController::class, 'index']);
+        Route::post('slots', [App\Http\Controllers\PsychologistSlotController::class, 'store']);
+        Route::delete('slots/{slot}', [App\Http\Controllers\PsychologistSlotController::class, 'destroy']);
+    });
 });
