@@ -50,6 +50,7 @@ class AppServiceProvider extends ServiceProvider
         });
         Gate::policy(\App\Models\PsychologistProfile::class, \App\Policies\PsychologistPolicy::class);
         Gate::policy(\App\Models\PsychologistSlot::class, \App\Policies\PsychologistSlotPolicy::class);
+        Gate::policy(\App\Models\BookingSchedule::class, \App\Policies\BookingSchedulePolicy::class);
 
         Event::listen(
             ReportCreated::class,
