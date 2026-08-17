@@ -46,7 +46,7 @@ class UserSeeder extends Seeder
             'school_id' => null,
         ]);
         User::factory()->create([
-            'username' => 'kepsek',
+            'username' => 'headteacher',
             'verified' => true,
             'role' => UserRole::HEADTEACHER->value,
             'mentor_id' => null,

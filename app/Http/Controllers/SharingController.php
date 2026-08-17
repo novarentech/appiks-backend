@@ -130,7 +130,10 @@ class SharingController extends Controller
     #[Group('Sharing')]
     public function acknowledge(Sharing $sharing)
     {
-        $sharing->update(['status' => ReportStatus::DITINJAU->value]);
+        $sharing->update([
+            'status' => ReportStatus::DITINJAU->value,
+            'acknowledged_at' => now(),
+        ]);
 
         return $this->success(new SharingResource($sharing->load(['nlp', 'counseling'])));
     }

@@ -178,4 +178,11 @@ Route::middleware('auth:api')->group(function () {
         Route::get('referrals/pending', [App\Http\Controllers\PsychologistReferralController::class, 'pending']);
         Route::patch('referrals/{booking}/decide', [App\Http\Controllers\PsychologistReferralController::class, 'decide']);
     });
+
+    // Principal Awareness Dashboard (AND-12)
+    Route::prefix('headteacher')->group(function () {
+        Route::get('dashboard/stats', [App\Http\Controllers\PrincipalDashboardController::class, 'stats']);
+        Route::get('incidents', [App\Http\Controllers\PrincipalDashboardController::class, 'incidents']);
+        Route::patch('notifications/{id}/read', [App\Http\Controllers\PrincipalDashboardController::class, 'markNotificationRead']);
+    });
 });

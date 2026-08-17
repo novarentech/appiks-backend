@@ -28,7 +28,7 @@
 ## 3. Operations & API Triggers (Route & Controller Blueprint)
 *Gunakan bagian ini untuk merancang Endpoint, HTTP Method, dan Logic Hook*
 - [ ] **Action:** Get Escalated Cases List (Saat Kepala Sekolah membuka dashboard)
-  - **HTTP Method & Type:** `GET` `/api/v1/kepsek/cases/escalated`
+  - **HTTP Method & Type:** `GET` `/api/v1/headteacher/cases/escalated`
   - **Behavior Logic:** Mengambil daftar kasus kritis yang mengalami keterlambatan penanganan (`sla_breach_alert == true`) untuk dimonitor Kepala Sekolah. `[Architect Note]`.
 
 ---

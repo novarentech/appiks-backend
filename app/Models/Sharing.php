@@ -15,6 +15,13 @@ class Sharing extends Model
 
     protected $hidden = ['updated_at'];
 
+    protected function casts(): array
+    {
+        return [
+            'acknowledged_at' => 'datetime',
+        ];
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);

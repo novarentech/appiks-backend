@@ -42,4 +42,4 @@ jobs:
           script: |
             cd /media/appiks-dev
             docker compose up backend -d --force-recreate --pull always
-            docker compose exec backend -t php artisan migrate --force
+            docker compose exec -t backend php artisan migrate --force
