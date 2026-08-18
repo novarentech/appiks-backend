@@ -14,7 +14,7 @@ return [
     | on Google AI Studio, at https://makersuite.google.com.
     */
 
-    'api_key' => null,
+    'api_key' => env('GEMINI_API_KEY',""),
 
     /*
     |--------------------------------------------------------------------------

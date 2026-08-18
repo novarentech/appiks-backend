@@ -15,7 +15,15 @@ class ClinicalSummary extends Model
     protected $fillable = [
         'counseling_id',
         'summary_data',
+        'raw_payload',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'raw_payload' => 'array',
+        ];
+    }
 
     public function counseling()
     {

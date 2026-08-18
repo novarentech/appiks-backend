@@ -3,9 +3,8 @@
 namespace App\Actions;
 
 use App\Enums\ConsentStatus;
-use App\Jobs\GenerateAISummaryJob;
+use App\Jobs\GenerateGeminiReferralSummaryJob;
 use App\Models\CounselingConsent;
-use App\Services\HeadlessDataGenerator;
 
 class UpdateConsentAction
 {
@@ -26,14 +25,9 @@ class UpdateConsentAction
             $consent->rejected_at = null;
             $consent->save();
 
-            // Run Headless PII reduction generator
             $counseling = $consent->counseling;
-            if ($counseling && $counseling->student) {
-                $generator = new HeadlessDataGenerator();
-                $sanitizedText = $generator->generateSanitizedText($counseling->student);
-
-                // Dispatch Background AI clinical summarization job
-                GenerateAISummaryJob::dispatch($consent->counseling_id, $sanitizedText);
+            if ($counseling) {
+                GenerateGeminiReferralSummaryJob::dispatch($counseling);
             }
         } else {
             $consent->status = ConsentStatus::REJECTED;
