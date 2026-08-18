@@ -21,6 +21,7 @@ class DemoCaseSeeder extends Seeder
     {
         $password = Hash::make('password');
         $this->call([
+            LocationSeeder::class,
             SchoolSeeder::class
         ]);
 User::factory()->create([
@@ -30,7 +31,7 @@ User::factory()->create([
             'counselor_id' => null,
             'mentor_id' => null,
             'room_id' => null,
-            'school_id' => null,
+            'school_id' => 1,
         ]);
         
         // 1-5 Guru BK
@@ -38,47 +39,51 @@ User::factory()->create([
         for ($i = 1; $i <= 5; $i++) {
             $counselors[$i] = User::create([
                 'name' => "Guru BK 0{$i}",
-'verified'=>true,
+                'verified'=>true,
                 'username' => "bk0{$i}",
                 'identifier' => "BK" . str_pad($i, 4, '0', STR_PAD_LEFT),
                 'password' => $password,
                 'role' => UserRole::COUNSELOR->value,
+                'school_id' => 1,
             ]);
         }
-
+        
         // 6-10 Siswa
         $students = [];
         for ($i = 1; $i <= 5; $i++) {
             $students[$i] = User::create([
                 'name' => "Siswa 0{$i}",
                 'username' => "siswa0{$i}",
-'verified'=>true,
+                'verified'=>true,
                 'identifier' => "SW" . str_pad($i, 4, '0', STR_PAD_LEFT),
                 'password' => $password,
                 'role' => UserRole::STUDENT->value,
                 'counselor_id' => $counselors[$i]->id,
+                'school_id' => 1,
             ]);
         }
-
+        
         // 11 Guru BK Demo
         $bkDemo = User::create([
             'name' => "Guru BK Demo",
             'username' => "bkdemo",
-'verified'=>true,
+            'verified'=>true,
             'identifier' => "BK9999",
             'password' => $password,
             'role' => UserRole::COUNSELOR->value,
+            'school_id' => 1,
         ]);
-
+        
         // 12 Siswa Demo
         $siswaDemo = User::create([
             'name' => "Siswa Demo",
             'username' => "siswademo",
-'verified'=>true,
+            'verified'=>true,
             'identifier' => "SW9999",
             'password' => $password,
             'role' => UserRole::STUDENT->value,
             'counselor_id' => $bkDemo->id,
+            'school_id' => 1,
         ]);
 
         // Setiap akun bk01..bk05 harus punya dua kasus yang sudah melewati NLP
