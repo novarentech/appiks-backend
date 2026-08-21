@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateConsentRequest extends FormRequest
 {
@@ -24,7 +25,14 @@ class UpdateConsentRequest extends FormRequest
         return [
             'is_granted' => ['required', 'boolean'],
             'scopes' => ['nullable', 'array'],
-            'scopes.*' => ['string'],
+            'scopes.*' => [
+                'string',
+                Rule::in([
+                    'mood_history',
+                    'sharing_history',
+                    'assesment_logs',
+                ]),
+            ],
         ];
     }
 }

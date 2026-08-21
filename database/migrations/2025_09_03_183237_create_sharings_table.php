@@ -22,6 +22,7 @@ return new class extends Migration
             $table->string('replied_by')->nullable();
             $table->enum('priority', ['tinggi', 'rendah'])->default('rendah');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

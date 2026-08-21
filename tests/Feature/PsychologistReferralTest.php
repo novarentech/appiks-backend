@@ -197,3 +197,285 @@ test('psychologist pending referrals list, decision, and auto-expiry command', f
     expect($expiredSlot->status)->toBe(SlotStatus::AVAILABLE);
     Event::assertDispatched(BookingExpired::class);
 });
+
+test('psychologist referrals overview and paginated list with filters', function () {
+    \Illuminate\Support\Facades\Queue::fake([\App\Jobs\ProcessNlpAnalysisJob::class]);
+
+    $school = School::create([
+        'name' => 'SMK 3 Overview Test',
+        'address' => 'Test Street 3',
+        'phone' => '02133334444',
+        'email' => 'smk3@test.com',
+        'district' => 'Menteng',
+        'city' => 'Jakarta Pusat',
+        'province' => 'DKI Jakarta',
+    ]);
+
+    $psychologist = User::create([
+        'name' => 'Dr. Overview Psychologist',
+        'username' => 'dr_overview_psy',
+        'identifier' => 'PSY-700',
+        'password' => bcrypt('password'),
+        'role' => UserRole::PSYCHOLOGIST->value,
+    ]);
+
+    $profile = PsychologistProfile::create([
+        'user_id' => $psychologist->id,
+        'institution_name' => 'RS Jiwa Sehat',
+        'str_number' => 'STR-TEST-700',
+        'specialization' => 'Clinical Psychologist',
+    ]);
+
+    $student = User::create([
+        'name' => 'Student Overview',
+        'username' => 'student_overview',
+        'identifier' => 'STU-700',
+        'password' => bcrypt('password'),
+        'role' => UserRole::STUDENT->value,
+        'school_id' => $school->id,
+    ]);
+
+    $counselor = User::create([
+        'name' => 'Counselor Overview',
+        'username' => 'counselor_overview',
+        'identifier' => 'COU-700',
+        'password' => bcrypt('password'),
+        'role' => UserRole::COUNSELOR->value,
+        'school_id' => $school->id,
+    ]);
+
+    // 1. Pending referral (Priority: tinggi / kritis, Batas waktu: aktif)
+    $sharing1 = Sharing::create([
+        'user_id' => $student->id,
+        'title' => 'Curhat 1',
+        'description' => 'Desc 1',
+        'priority' => 'tinggi',
+    ]);
+    $counseling1 = Counseling::create([
+        'student_id' => $student->id,
+        'counselor_id' => $counselor->id,
+        'psychologist_id' => $psychologist->id,
+        'sharing_id' => $sharing1->id,
+        'type' => 'external',
+        'status' => CounselingStatus::DIJADWALKAN->value,
+    ]);
+    $slot1 = PsychologistSlot::create([
+        'psychologist_id' => $profile->id,
+        'slot_date' => now()->addDays(1)->toDateString(),
+        'slot_start_time' => '09:00:00',
+        'slot_end_time' => '10:00:00',
+        'status' => SlotStatus::TENTATIVE->value,
+    ]);
+    $booking1 = BookingSchedule::create([
+        'counseling_id' => $counseling1->id,
+        'slot_id' => $slot1->id,
+        'student_id' => $student->id,
+        'status' => BookingStatus::PENDING->value,
+        'deadline_at' => now()->addHours(12),
+    ]);
+
+    // 2. Confirmed referral (Priority: rendah / prioritas, Counseling != selesai)
+    $sharing2 = Sharing::create([
+        'user_id' => $student->id,
+        'title' => 'Curhat 2',
+        'description' => 'Desc 2',
+        'priority' => 'rendah',
+    ]);
+    $counseling2 = Counseling::create([
+        'student_id' => $student->id,
+        'counselor_id' => $counselor->id,
+        'psychologist_id' => $psychologist->id,
+        'sharing_id' => $sharing2->id,
+        'type' => 'external',
+        'status' => CounselingStatus::DIJADWALKAN->value,
+    ]);
+    $slot2 = PsychologistSlot::create([
+        'psychologist_id' => $profile->id,
+        'slot_date' => now()->addDays(2)->toDateString(),
+        'slot_start_time' => '10:00:00',
+        'slot_end_time' => '11:00:00',
+        'status' => SlotStatus::CONFIRMED->value,
+    ]);
+    $booking2 = BookingSchedule::create([
+        'counseling_id' => $counseling2->id,
+        'slot_id' => $slot2->id,
+        'student_id' => $student->id,
+        'status' => BookingStatus::CONFIRMED->value,
+        'deadline_at' => now()->subHours(2),
+    ]);
+
+    // 3. Selesai referral (Priority: tinggi / kritis, Counseling == selesai)
+    $sharing3 = Sharing::create([
+        'user_id' => $student->id,
+        'title' => 'Curhat 3',
+        'description' => 'Desc 3',
+        'priority' => 'tinggi',
+    ]);
+    $counseling3 = Counseling::create([
+        'student_id' => $student->id,
+        'counselor_id' => $counselor->id,
+        'psychologist_id' => $psychologist->id,
+        'sharing_id' => $sharing3->id,
+        'type' => 'external',
+        'status' => CounselingStatus::SELESAI->value,
+    ]);
+    $slot3 = PsychologistSlot::create([
+        'psychologist_id' => $profile->id,
+        'slot_date' => now()->subDays(1)->toDateString(),
+        'slot_start_time' => '11:00:00',
+        'slot_end_time' => '12:00:00',
+        'status' => SlotStatus::CONFIRMED->value,
+    ]);
+    $booking3 = BookingSchedule::create([
+        'counseling_id' => $counseling3->id,
+        'slot_id' => $slot3->id,
+        'student_id' => $student->id,
+        'status' => BookingStatus::CONFIRMED->value,
+        'deadline_at' => now()->subDay(),
+    ]);
+
+    // 4. Rejected referral
+    $sharing4 = Sharing::create([
+        'user_id' => $student->id,
+        'title' => 'Curhat 4',
+        'description' => 'Desc 4',
+        'priority' => 'rendah',
+    ]);
+    $counseling4 = Counseling::create([
+        'student_id' => $student->id,
+        'counselor_id' => $counselor->id,
+        'psychologist_id' => $psychologist->id,
+        'sharing_id' => $sharing4->id,
+        'type' => 'external',
+        'status' => CounselingStatus::DITOLAK->value,
+    ]);
+    $slot4 = PsychologistSlot::create([
+        'psychologist_id' => $profile->id,
+        'slot_date' => now()->addDays(3)->toDateString(),
+        'slot_start_time' => '13:00:00',
+        'slot_end_time' => '14:00:00',
+        'status' => SlotStatus::AVAILABLE->value,
+    ]);
+    $booking4 = BookingSchedule::create([
+        'counseling_id' => $counseling4->id,
+        'slot_id' => $slot4->id,
+        'student_id' => $student->id,
+        'status' => BookingStatus::REJECTED->value,
+        'reject_reason' => 'Busy',
+        'deadline_at' => now()->subHours(5),
+    ]);
+
+    // 5. Expired referral
+    $sharing5 = Sharing::create([
+        'user_id' => $student->id,
+        'title' => 'Curhat 5',
+        'description' => 'Desc 5',
+        'priority' => 'rendah',
+    ]);
+    $counseling5 = Counseling::create([
+        'student_id' => $student->id,
+        'counselor_id' => $counselor->id,
+        'psychologist_id' => $psychologist->id,
+        'sharing_id' => $sharing5->id,
+        'type' => 'external',
+        'status' => CounselingStatus::DIJADWALKAN->value,
+    ]);
+    $slot5 = PsychologistSlot::create([
+        'psychologist_id' => $profile->id,
+        'slot_date' => now()->addDays(4)->toDateString(),
+        'slot_start_time' => '14:00:00',
+        'slot_end_time' => '15:00:00',
+        'status' => SlotStatus::AVAILABLE->value,
+    ]);
+    $booking5 = BookingSchedule::create([
+        'counseling_id' => $counseling5->id,
+        'slot_id' => $slot5->id,
+        'student_id' => $student->id,
+        'status' => BookingStatus::EXPIRED->value,
+        'deadline_at' => now()->subHours(10),
+    ]);
+
+    // A. Test GET /api/psychologist/referrals-overview
+    // Unauthorized student -> 403
+    $this->actingAs($student, 'api')
+        ->getJson('/api/psychologist/referrals-overview')
+        ->assertStatus(403);
+
+    // Authorized psychologist -> 200
+    $overviewResponse = $this->actingAs($psychologist, 'api')
+        ->getJson('/api/psychologist/referrals-overview')
+        ->assertStatus(200)
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('data.pending', 1)
+        ->assertJsonPath('data.confirmed', 1)
+        ->assertJsonPath('data.selesai', 1);
+
+    expect(array_key_exists('total', $overviewResponse->json('data')))->toBeFalse();
+
+    // B. Test GET /api/psychologist/referrals (all + pagination)
+    $this->actingAs($psychologist, 'api')
+        ->getJson('/api/psychologist/referrals?per_page=2')
+        ->assertStatus(200)
+        ->assertJsonPath('success', true)
+        ->assertJsonCount(2, 'data.data')
+        ->assertJsonPath('data.meta.total', 5);
+
+    // Filter: status = menunggu konfirmasi
+    $this->actingAs($psychologist, 'api')
+        ->getJson('/api/psychologist/referrals?status=menunggu+konfirmasi')
+        ->assertStatus(200)
+        ->assertJsonCount(1, 'data.data')
+        ->assertJsonPath('data.data.0.status', 'pending');
+
+    // Filter: status = terkonfirmasi
+    $this->actingAs($psychologist, 'api')
+        ->getJson('/api/psychologist/referrals?status=terkonfirmasi')
+        ->assertStatus(200)
+        ->assertJsonCount(1, 'data.data')
+        ->assertJsonPath('data.data.0.id', $booking2->id);
+
+    // Filter: status = selesai
+    $this->actingAs($psychologist, 'api')
+        ->getJson('/api/psychologist/referrals?status=selesai')
+        ->assertStatus(200)
+        ->assertJsonCount(1, 'data.data')
+        ->assertJsonPath('data.data.0.id', $booking3->id);
+
+    // Filter: status = ditolak
+    $this->actingAs($psychologist, 'api')
+        ->getJson('/api/psychologist/referrals?status=ditolak')
+        ->assertStatus(200)
+        ->assertJsonCount(1, 'data.data')
+        ->assertJsonPath('data.data.0.status', 'rejected');
+
+    // Filter: status = kadaluarsa
+    $this->actingAs($psychologist, 'api')
+        ->getJson('/api/psychologist/referrals?status=kadaluarsa')
+        ->assertStatus(200)
+        ->assertJsonCount(1, 'data.data')
+        ->assertJsonPath('data.data.0.status', 'expired');
+
+    // Filter: priority = kritis
+    $this->actingAs($psychologist, 'api')
+        ->getJson('/api/psychologist/referrals?priority=kritis')
+        ->assertStatus(200)
+        ->assertJsonCount(2, 'data.data');
+
+    // Filter: priority = prioritas
+    $this->actingAs($psychologist, 'api')
+        ->getJson('/api/psychologist/referrals?priority=prioritas')
+        ->assertStatus(200)
+        ->assertJsonCount(3, 'data.data');
+
+    // Filter: batas_waktu = aktif
+    $this->actingAs($psychologist, 'api')
+        ->getJson('/api/psychologist/referrals?batas_waktu=aktif')
+        ->assertStatus(200)
+        ->assertJsonCount(3, 'data.data'); // booking1 (deadline future), booking2 & booking3 (status confirmed)
+
+    // Filter: batas_waktu = kadaluarsa
+    $this->actingAs($psychologist, 'api')
+        ->getJson('/api/psychologist/referrals?batas_waktu=kadaluarsa')
+        ->assertStatus(200)
+        ->assertJsonCount(4, 'data.data'); // booking2, booking3, booking4, booking5 (deadlines in the past)
+});

@@ -175,6 +175,8 @@ Route::middleware('auth:api')->group(function () {
         Route::get('slots', [App\Http\Controllers\PsychologistSlotController::class, 'index']);
         Route::post('slots', [App\Http\Controllers\PsychologistSlotController::class, 'store']);
         Route::delete('slots/{slot}', [App\Http\Controllers\PsychologistSlotController::class, 'destroy']);
+        Route::get('referrals', [App\Http\Controllers\PsychologistReferralController::class, 'index']);
+        Route::get('referrals-overview', [App\Http\Controllers\PsychologistReferralController::class, 'overview']);
         Route::get('referrals/pending', [App\Http\Controllers\PsychologistReferralController::class, 'pending']);
         Route::patch('referrals/{booking}/decide', [App\Http\Controllers\PsychologistReferralController::class, 'decide']);
         Route::get('referrals/{counseling}/summary', [App\Http\Controllers\PsychologistSummaryController::class, 'getSummary']);

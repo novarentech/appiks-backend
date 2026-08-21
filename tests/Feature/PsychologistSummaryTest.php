@@ -103,6 +103,12 @@ test('student consent triggers gemini summary job and psychologist can fetch sum
         'priority' => 'tinggi',
     ]);
 
+    $mood = \App\Models\MoodRecord::create([
+        'user_id' => $student->id,
+        'recorded' => now()->subDays(2)->toDateString(),
+        'status' => \App\Enums\MoodStatus::SAD->value,
+    ]);
+
     $counseling = Counseling::create([
         'student_id' => $student->id,
         'counselor_id' => $counselor->id,
@@ -110,6 +116,15 @@ test('student consent triggers gemini summary job and psychologist can fetch sum
         'type' => 'external',
         'resolution' => CounselingResolution::NEEDMORE->value,
         'status' => CounselingStatus::DIJADWALKAN->value,
+    ]);
+
+    $counselingLog = \App\Models\CounselingLog::create([
+        'counseling_id' => $counseling->id,
+        'student_id' => $student->id,
+        'counselor_id' => $counselor->id,
+        'session_mode' => 'offline',
+        'clinical_notes' => 'Siswa memerlukan pendampingan lebih lanjut oleh psikolog.',
+        'resolution_status' => CounselingResolution::NEEDMORE->value,
     ]);
 
     $consent = CounselingConsent::create([
@@ -139,16 +154,17 @@ test('student consent triggers gemini summary job and psychologist can fetch sum
     $this->actingAs($student, 'api')
         ->patchJson("/api/student/consents/{$consent->id}", [
             'is_granted' => true,
-            'scopes' => ['counseling_logs', 'sharings'],
+            'scopes' => ['mood_history', 'sharing_history', 'assesment_logs'],
         ])
         ->assertStatus(200);
 
     $consent->refresh();
     expect($consent->status)->toBe(ConsentStatus::GRANTED);
-    expect($consent->scopes)->toEqual(['counseling_logs', 'sharings']);
+    expect($consent->scopes)->toEqual(['mood_history', 'sharing_history', 'assesment_logs']);
     Queue::assertPushed(GenerateGeminiReferralSummaryJob::class);
 
     // 3. Test GenerateGeminiReferralSummaryJob execution with Gemini Fake
+    config(['gemini.api_key' => 'fake-api-key']);
     Gemini::fake([
         GenerateContentResponse::fake([
             'candidates' => [
@@ -173,7 +189,9 @@ test('student consent triggers gemini summary job and psychologist can fetch sum
     expect($summary)->not->toBeNull();
     expect($summary->summary_data)->toContain('Siswa menunjukkan kecemasan terkait ujian akademik');
     expect($summary->raw_payload)->toBeArray();
-    expect(array_key_exists('incidents', $summary->raw_payload))->toBeTrue();
+    expect(array_key_exists('mood_history', $summary->raw_payload))->toBeTrue();
+    expect(array_key_exists('sharing_history', $summary->raw_payload))->toBeTrue();
+    expect(array_key_exists('assesment_logs', $summary->raw_payload))->toBeTrue();
 
     // 4. Test GET /api/psychologist/referrals/{counseling}/summary Authorization
     // 4a. Unauthorized Student -> 403

@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Enums\ConsentStatus;
 use App\Models\ClinicalSummary;
 use App\Models\Counseling;
+use App\Models\MoodRecord;
 use App\Models\Sharing;
 use App\Traits\InteractsWithGemini;
 use Illuminate\Bus\Queueable;
@@ -32,16 +33,28 @@ class GenerateGeminiReferralSummaryJob implements ShouldQueue
         $payload = [];
         $student = $this->counseling->student;
 
-        // Aggregation strictly based on consent scopes
-        if (in_array('counseling_logs', $scopes)) {
-            $payload['logs'] = $this->counseling->logs()
-                ->select('session_mode', 'clinical_notes', 'created_at')
+        // 1. Riwayat mood 30 hari (mood_history)
+        if (in_array('mood_history', $scopes)) {
+            $payload['mood_history'] = MoodRecord::where('user_id', $student->id)
+                ->where('recorded', '>=', now()->subDays(30)->toDateString())
+                ->select('recorded', 'status')
+                ->orderByDesc('recorded')
                 ->get();
         }
 
-        if (in_array('sharings', $scopes) || in_array('incidents', $scopes)) {
-            $payload['incidents'] = Sharing::where('user_id', $student->id)
-                ->select('description', 'priority', 'created_at')
+        // 2. Curhat 30 hari terakhir (sharing_history)
+        if (in_array('sharing_history', $scopes) || in_array('sharings', $scopes) || in_array('incidents', $scopes)) {
+            $payload['sharing_history'] = Sharing::where('user_id', $student->id)
+                ->where('created_at', '>=', now()->subDays(30))
+                ->select('title', 'description', 'priority', 'created_at')
+                ->orderByDesc('created_at')
+                ->get();
+        }
+
+        // 3. Catatan guru BK (assesment_logs)
+        if (in_array('assesment_logs', $scopes) || in_array('counseling_logs', $scopes)) {
+            $payload['assesment_logs'] = $this->counseling->logs()
+                ->select('session_mode', 'clinical_notes', 'resolution_status', 'created_at')
                 ->get();
         }
 

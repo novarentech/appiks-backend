@@ -71,6 +71,7 @@ class PsychologistSummaryController extends Controller
         return $this->success([
             'student'      => $studentIdentity,
             'generated_at' => $summary->updated_at,
+            'llm_provider' => 'gemini-2.5-flash',
             'summary_text' => $summary->summary_data,
             'raw_payload'  => $summary->raw_payload,
         ], 'Ringkasan berhasil diambil.');
