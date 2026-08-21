@@ -18,7 +18,7 @@ class PsychologistSummaryController extends Controller
     /**
      * Get AI referral clinical summary
      *
-     * Mendapatkan ringkasan klinis rujukan yang dihasilkan oleh AI beserta identitas siswa, catatan klinis, dan masukan evaluasi.
+     * Mendapatkan ringkasan klinis rujukan yang dihasilkan oleh AI beserta identitas siswa, guru BK penanggung jawab, curhat terkait dan analisis NLP, catatan klinis, dan masukan evaluasi.
      *
      * @response array{
      *   success: true,
@@ -27,8 +27,23 @@ class PsychologistSummaryController extends Controller
      *     student: array{
      *       name: string,
      *       nis: string,
-     *       class: string|null
+     *       class: string|null,
+     *       counselor_name: string|null
      *     },
+     *     sharing: array{
+     *       id: int,
+     *       title: string,
+     *       description: string,
+     *       priority: string,
+     *       status: string,
+     *       created_at: string,
+     *       nlp: array{
+     *         id: int,
+     *         flag: string|null,
+     *         status: string|null,
+     *         response: array<string, mixed>|null
+     *       }|null
+     *     }|null,
      *     generated_at: string,
      *     llm_provider: string,
      *     summary_text: string,
@@ -64,16 +79,41 @@ class PsychologistSummaryController extends Controller
             return $this->error('Ringkasan AI belum tersedia atau gagal dibuat.', 404);
         }
 
+        // Load related relationships
+        $counseling->load(['sharing.nlp', 'student.room', 'student.counselor', 'counselor']);
+
         // De-anonymized identity
         $student = $booking->counseling->student;
         $studentIdentity = [
-            'name'  => $student->name,
-            'nis'   => $student->username,
-            'class' => $student->room->name ?? null,
+            'name'           => $student->name,
+            'nis'            => $student->username,
+            'class'          => $student->room->name ?? null,
+            'counselor_name' => $student->counselor->name ?? $counseling->counselor->name ?? null,
         ];
+
+        // Related sharing with NLP analysis
+        $sharingData = null;
+        if ($counseling->sharing) {
+            $sharing = $counseling->sharing;
+            $sharingData = [
+                'id'          => $sharing->id,
+                'title'       => $sharing->title,
+                'description' => $sharing->description,
+                'priority'    => $sharing->priority,
+                'status'      => $sharing->status,
+                'created_at'  => $sharing->created_at,
+                'nlp'         => $sharing->nlp ? [
+                    'id'       => $sharing->nlp->id,
+                    'flag'     => $sharing->nlp->flag,
+                    'status'   => $sharing->nlp->status?->value ?? $sharing->nlp->status,
+                    'response' => $sharing->nlp->response,
+                ] : null,
+            ];
+        }
 
         return $this->success([
             'student'              => $studentIdentity,
+            'sharing'              => $sharingData,
             'generated_at'         => $summary->updated_at,
             'llm_provider'         => 'gemini-2.5-flash',
             'summary_text'         => $summary->summary_data,

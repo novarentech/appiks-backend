@@ -96,12 +96,32 @@ test('student consent triggers gemini summary job and psychologist can fetch sum
         'specialization' => 'Child Psychologist',
     ]);
 
+    \Illuminate\Support\Facades\Queue::fake([\App\Jobs\ProcessNlpAnalysisJob::class]);
+
     $sharing = Sharing::create([
         'user_id' => $student->id,
         'title' => 'Tekanan Belajar',
         'description' => 'Sering merasa cemas dan panik saat menjelang ujian akhir.',
         'priority' => 'tinggi',
     ]);
+
+    \App\Models\NlpAnalysis::updateOrCreate(
+        [
+            'nlpable_type' => Sharing::class,
+            'nlpable_id' => $sharing->id,
+        ],
+        [
+            'text' => $sharing->description,
+            'response' => [
+                'total_score' => 8,
+                'zone_status' => 'Red',
+                'matched_keywords' => [
+                    ['stem' => 'panik', 'zone' => 'Red', 'weight' => 8],
+                ],
+            ],
+            'flag' => 'Red',
+        ]
+    );
 
     $mood = \App\Models\MoodRecord::create([
         'user_id' => $student->id,
@@ -212,11 +232,18 @@ test('student consent triggers gemini summary job and psychologist can fetch sum
         ->assertJsonPath('data.student.name', 'Budi Siswa')
         ->assertJsonPath('data.student.nis', 'budi_siswa')
         ->assertJsonPath('data.student.class', 'XII RPL 1')
+        ->assertJsonPath('data.student.counselor_name', 'Guru BK Test')
+        ->assertJsonPath('data.sharing.title', 'Tekanan Belajar')
+        ->assertJsonPath('data.sharing.description', 'Sering merasa cemas dan panik saat menjelang ujian akhir.')
+        ->assertJsonPath('data.sharing.priority', 'tinggi')
+        ->assertJsonPath('data.sharing.nlp.flag', 'Red')
+        ->assertJsonPath('data.sharing.nlp.response.zone_status', 'Red')
         ->assertJsonPath('data.llm_provider', 'gemini-2.5-flash')
         ->assertJsonPath('data.summary_text', $summary->summary_data);
 
     $responseData = $response->json('data');
     expect(array_key_exists('student', $responseData))->toBeTrue();
+    expect(array_key_exists('sharing', $responseData))->toBeTrue();
     expect(array_key_exists('summary_text', $responseData))->toBeTrue();
     expect(array_key_exists('raw_payload', $responseData))->toBeTrue();
     expect(array_key_exists('generated_at', $responseData))->toBeTrue();
