@@ -132,4 +132,55 @@ test('psychologist slot management endpoints', function () {
     $this->actingAs($psychologist, 'api')
         ->deleteJson("/api/psychologist/slots/{$nonAvailableSlot->id}")
         ->assertStatus(422);
+
+    // 11. Test GET /api/psychologist/slots with start and end query parameters
+    $date1 = now()->addDays(2)->toDateString();
+    $date2 = now()->addDays(5)->toDateString();
+    $date3 = now()->addDays(10)->toDateString();
+
+    $slotDate1 = PsychologistSlot::create([
+        'psychologist_id' => $profile->id,
+        'slot_date' => $date1,
+        'slot_start_time' => '08:00',
+        'slot_end_time' => '09:00',
+        'status' => SlotStatus::AVAILABLE->value,
+    ]);
+
+    $slotDate2 = PsychologistSlot::create([
+        'psychologist_id' => $profile->id,
+        'slot_date' => $date2,
+        'slot_start_time' => '08:00',
+        'slot_end_time' => '09:00',
+        'status' => SlotStatus::AVAILABLE->value,
+    ]);
+
+    $slotDate3 = PsychologistSlot::create([
+        'psychologist_id' => $profile->id,
+        'slot_date' => $date3,
+        'slot_start_time' => '08:00',
+        'slot_end_time' => '09:00',
+        'status' => SlotStatus::AVAILABLE->value,
+    ]);
+
+    // Query: ?start=$date2 (should include date2 and date3)
+    $this->actingAs($psychologist, 'api')
+        ->getJson("/api/psychologist/slots?start={$date2}")
+        ->assertStatus(200)
+        ->assertJsonCount(2, 'data')
+        ->assertJsonPath('data.0.id', $slotDate2->id)
+        ->assertJsonPath('data.1.id', $slotDate3->id);
+
+    // Query: ?end=$date2 (should include nonAvailableSlot on tomorrow, and slotDate1 on date1, and slotDate2 on date2)
+    $this->actingAs($psychologist, 'api')
+        ->getJson("/api/psychologist/slots?end={$date2}")
+        ->assertStatus(200)
+        ->assertJsonCount(3, 'data');
+
+    // Query: ?start=$date1&end=$date2 (should include slotDate1 and slotDate2)
+    $this->actingAs($psychologist, 'api')
+        ->getJson("/api/psychologist/slots?start={$date1}&end={$date2}")
+        ->assertStatus(200)
+        ->assertJsonCount(2, 'data')
+        ->assertJsonPath('data.0.id', $slotDate1->id)
+        ->assertJsonPath('data.1.id', $slotDate2->id);
 });
