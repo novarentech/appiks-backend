@@ -35,7 +35,7 @@ class CounselingController extends Controller
         if (Auth::user()->role != UserRole::STUDENT->value) {
             return $this->error('Only student can access this endpoint',403);
         }
-        $counselings = Counseling::with(['student', 'counselor', 'sharing'])
+        $counselings = Counseling::with(['student', 'counselor', 'sharing','psychologist'])
             ->where('student_id', Auth::id())
             ->where('type', $type)
             ->get();

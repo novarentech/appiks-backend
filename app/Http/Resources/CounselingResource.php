@@ -18,6 +18,7 @@ class CounselingResource extends JsonResource
             'student' => new UserResource($this->whenLoaded('student')),
             'counselor' => new UserResource($this->whenLoaded('counselor')),
             'sharing' => new SharingResource($this->whenLoaded('sharing')),
+            'psychologist' => new UserResource($this->whenLoaded('psychologist')),
         ]);
     }
 }
