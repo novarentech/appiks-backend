@@ -159,7 +159,7 @@ Route::middleware('auth:api')->group(function () {
     Route::prefix('student')->group(function () {
         Route::get('dashboard/widgets', [StudentDashboardController::class, 'getWidgets']);
         Route::get('counselings', [StudentDashboardController::class, 'getCounselings']);
-        Route::get('counselings/{consent}/consent', [StudentConsentController::class, 'show']);
+        Route::get('counselings/{counseling}/consent', [StudentConsentController::class, 'show']);
         Route::patch('counselings/{counseling}/acknowledge', [CounselingController::class, 'acknowledge']);
         Route::patch('consents/{consent}', [StudentConsentController::class, 'update']);
 
