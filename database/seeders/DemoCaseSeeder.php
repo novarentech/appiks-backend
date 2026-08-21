@@ -74,27 +74,40 @@ User::factory()->create([
             'school_id' => 1,
         ]);
         
-        // 12 Siswa Demo
-        $siswaDemo = User::create([
-            'name' => "Siswa Demo",
+        // 12 Siswa Demo 1 & 2
+        $siswaDemo1 = User::create([
+            'name' => "Siswa Demo 1",
             'username' => "siswademo",
             'verified'=>true,
-            'identifier' => "SW9999",
+            'identifier' => "SW9991",
             'password' => $password,
             'role' => UserRole::STUDENT->value,
             'counselor_id' => $bkDemo->id,
             'school_id' => 1,
         ]);
 
-        // Setiap akun bk01..bk05 harus punya dua kasus yang sudah melewati NLP
-        // Kasus ini dibuat oleh siswa01..siswa05 yang terkait
-        foreach ($students as $siswa) {
+        $siswaDemo2 = User::create([
+            'name' => "Siswa Demo 2",
+            'username' => "siswademo2",
+            'verified'=>true,
+            'identifier' => "SW9992",
+            'password' => $password,
+            'role' => UserRole::STUDENT->value,
+            'counselor_id' => $bkDemo->id,
+            'school_id' => 1,
+        ]);
+
+        $allStudents = array_merge(array_values($students), [$siswaDemo1, $siswaDemo2]);
+
+        // Setiap siswa memiliki kasus curhat yang sudah melewati NLP (Zona Kuning & Merah)
+        foreach ($allStudents as $siswa) {
             // Kasus Kuning
             $sharingKuning = Sharing::create([
                 'user_id' => $siswa->id,
                 'title' => 'Merasa Hampa',
                 'description' => 'Akhir-akhir ini rasanya hampa, aku gagal terus di semua hal.',
                 'status' => ReportStatus::MENUNGGU_TINJAUAN->value,
+                'priority' => 'rendah',
             ]);
 
             NlpAnalysis::create([
@@ -118,6 +131,7 @@ User::factory()->create([
                 'title' => 'Capek Banget',
                 'description' => 'Capek banget, kadang kepikiran mau mati aja.',
                 'status' => ReportStatus::MENUNGGU_TINJAUAN->value,
+                'priority' => 'tinggi',
             ]);
 
             NlpAnalysis::create([
@@ -134,6 +148,7 @@ User::factory()->create([
                 'flag' => 'Red',
             ]);
         }
+
         $this->call([
             PsychologistSeeder::class,
             PsychologistSlotSeeder::class,
