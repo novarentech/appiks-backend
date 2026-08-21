@@ -143,7 +143,9 @@ test('psychologist pending referrals list, decision, and auto-expiry command', f
         ->patchJson("/api/psychologist/referrals/{$booking->id}/decide", [
             'action' => 'confirm',
         ])
-        ->assertStatus(200);
+        ->assertStatus(200)
+        ->assertJsonPath('data.status', BookingStatus::CONFIRMED->value)
+        ->assertJsonPath('data.slot.status', SlotStatus::CONFIRMED->value);
 
     $booking->refresh();
     $slot->refresh();
@@ -161,7 +163,9 @@ test('psychologist pending referrals list, decision, and auto-expiry command', f
             'action' => 'reject',
             'reject_reason' => 'Schedule conflict.',
         ])
-        ->assertStatus(200);
+        ->assertStatus(200)
+        ->assertJsonPath('data.status', BookingStatus::REJECTED->value)
+        ->assertJsonPath('data.slot.status', SlotStatus::AVAILABLE->value);
 
     $booking->refresh();
     $slot->refresh();

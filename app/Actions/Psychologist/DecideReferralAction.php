@@ -36,7 +36,7 @@ class DecideReferralAction
                 BookingRejected::dispatch($booking);
             }
 
-            return $booking->refresh();
+            return $booking->refresh()->load(['slot', 'student', 'counseling']);
         });
     }
 }
