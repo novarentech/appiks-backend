@@ -7,6 +7,7 @@ use App\Actions\Psychologist\GetPendingReferralsAction;
 use App\Enums\BookingStatus;
 use App\Enums\CounselingStatus;
 use App\Http\Requests\DecideReferralRequest;
+use App\Http\Requests\GetPsychologistReferralsRequest;
 use App\Http\Resources\BookingScheduleResource;
 use App\Models\BookingSchedule;
 use App\Models\Counseling;
@@ -77,10 +78,10 @@ class PsychologistReferralController extends Controller
      * Get all referrals for authenticated psychologist
      *
      * Mendapatkan seluruh daftar rujukan yang masuk untuk psikolog yang terautentikasi dengan paginasi dan filter.
-     *
-     * @queryParam status string Filter status rujukan ('menunggu konfirmasi', 'terkonfirmasi', 'selesai', 'ditolak', 'kadaluarsa'). Example: menunggu konfirmasi
-     * @queryParam priority string Filter prioritas rujukan ('kritis', 'prioritas'). Example: kritis
-     * @queryParam batas_waktu string Filter batas waktu rujukan ('aktif', 'kadaluarsa'). Example: aktif
+     * @queryParam search string Filter pencarian berdasarkan nama siswa. Example: Budi
+     * @queryParam status 'menunggu konfirmasi'|'terkonfirmasi'|'selesai'|'ditolak'|'kadaluarsa' Filter status rujukan. Example: menunggu konfirmasi
+     * @queryParam priority 'kritis'|'prioritas' Filter prioritas rujukan. Example: kritis
+     * @queryParam batas_waktu 'aktif'|'kadaluarsa' Filter batas waktu rujukan. Example: aktif
      * @queryParam per_page int Jumlah data per halaman. Default: 10. Example: 10
      * @queryParam page int Halaman yang ingin ditampilkan. Example: 1
      *
@@ -140,7 +141,7 @@ class PsychologistReferralController extends Controller
      * }
      */
     #[Group('Psychologist')]
-    public function index(Request $request): JsonResponse
+    public function index(GetPsychologistReferralsRequest $request): JsonResponse
     {
         $profile = auth()->user()->psychologistProfile;
 
@@ -158,6 +159,14 @@ class PsychologistReferralController extends Controller
         ->whereHas('slot', function ($q) use ($profile) {
             $q->where('psychologist_id', $profile->id);
         });
+
+        // Filter: search (student name)
+        if ($request->filled('search')) {
+            $search = trim($request->input('search'));
+            $query->whereHas('student', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%");
+            });
+        }
 
         // Filter: status
         if ($request->filled('status')) {

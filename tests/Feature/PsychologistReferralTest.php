@@ -478,4 +478,16 @@ test('psychologist referrals overview and paginated list with filters', function
         ->getJson('/api/psychologist/referrals?batas_waktu=kadaluarsa')
         ->assertStatus(200)
         ->assertJsonCount(4, 'data.data'); // booking2, booking3, booking4, booking5 (deadlines in the past)
+
+    // Filter: search = Student (matches 'Student Overview')
+    $this->actingAs($psychologist, 'api')
+        ->getJson('/api/psychologist/referrals?search=Student')
+        ->assertStatus(200)
+        ->assertJsonPath('data.meta.total', 5);
+
+    // Filter: search = NonExistent
+    $this->actingAs($psychologist, 'api')
+        ->getJson('/api/psychologist/referrals?search=NonExistent')
+        ->assertStatus(200)
+        ->assertJsonCount(0, 'data.data');
 });

@@ -137,6 +137,7 @@ User::factory()->create([
         $this->call([
             PsychologistSeeder::class,
             PsychologistSlotSeeder::class,
+            ReferralFlowSeeder::class,
         ]);
     }
 }

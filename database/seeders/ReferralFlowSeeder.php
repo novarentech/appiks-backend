@@ -67,7 +67,11 @@ class ReferralFlowSeeder extends Seeder
         $this->seedScenarioD($students[3], $counselor);
         $this->seedScenarioE($students[4], $counselor);
 
-        $this->command->info('ReferralFlowSeeder: All 5 referral scenarios seeded successfully.');
+        if (isset($students[5])) {
+            $this->seedScenarioF($students[5], $counselor);
+        }
+
+        $this->command->info('ReferralFlowSeeder: All referral scenarios seeded successfully.');
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -142,6 +146,13 @@ class ReferralFlowSeeder extends Seeder
                 'resolution'       => CounselingResolution::NEEDMORE->value,
                 'psychologist'     => 'Dr. Sarah Wijaya, M.Psi., Psikolog',
             ]),
+            'raw_payload'   => [
+                'mood_history'    => [],
+                'sharing_history' => [
+                    ['title' => 'Curhat saya ke BK', 'priority' => 'tinggi']
+                ],
+                'assesment_logs'  => [],
+            ],
             'created_at' => $sessionDate,
             'updated_at' => $sessionDate,
         ]);
@@ -308,6 +319,57 @@ class ReferralFlowSeeder extends Seeder
             'location'      => null,
             'created_at'    => $createdDate->copy()->addDay(),
             'updated_at'    => $createdDate->copy()->addDays(2),
+        ]);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Scenario F — Booking pending psychologist confirmation (Active SLA)
+    // ────────────────────────────────────────────────────────────────────────
+    private function seedScenarioF(User $student, User $counselor): void
+    {
+        $createdDate = Carbon::now()->subHours(6);
+
+        [$report, $sharing] = $this->createReferralBase($student, $counselor, ReportStatus::DIJADWALKAN, $createdDate);
+
+        $counseling = $this->createExternalCounseling(
+            student: $student,
+            counselor: $counselor,
+            report: $report,
+            sharing: $sharing,
+            status: CounselingStatus::DIJADWALKAN,
+            resolution: CounselingResolution::NEEDMORE,
+            scheduledAt: Carbon::now()->addDays(3),
+        );
+
+        // Consent: granted
+        CounselingConsent::create([
+            'counseling_id' => $counseling->id,
+            'status'        => ConsentStatus::GRANTED->value,
+            'scopes'        => json_encode(['mood_history', 'sharing_history', 'assesment_logs']),
+            'granted_at'    => $createdDate->copy()->addHour(),
+            'rejected_at'   => null,
+            'created_at'    => $createdDate,
+            'updated_at'    => $createdDate->copy()->addHour(),
+        ]);
+
+        // Slot: tentative
+        $slot = $this->createSlot(
+            date: Carbon::now()->addDays(3)->toDateString(),
+            startTime: '14:00:00',
+            endTime: '15:00:00',
+            status: SlotStatus::TENTATIVE,
+        );
+
+        // Booking: pending confirmation (active 24h deadline)
+        BookingSchedule::create([
+            'counseling_id' => $counseling->id,
+            'slot_id'       => $slot->id,
+            'student_id'    => $student->id,
+            'status'        => BookingStatus::PENDING->value,
+            'deadline_at'   => Carbon::now()->addHours(18),
+            'location'      => 'Puskesmas Kec. Menteng',
+            'created_at'    => $createdDate->copy()->addHour(),
+            'updated_at'    => $createdDate->copy()->addHour(),
         ]);
     }
 
