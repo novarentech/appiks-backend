@@ -180,6 +180,7 @@ Route::middleware('auth:api')->group(function () {
         Route::get('referrals/pending', [App\Http\Controllers\PsychologistReferralController::class, 'pending']);
         Route::patch('referrals/{booking}/decide', [App\Http\Controllers\PsychologistReferralController::class, 'decide']);
         Route::get('referrals/{counseling}/summary', [App\Http\Controllers\PsychologistSummaryController::class, 'getSummary']);
+        Route::post('referrals/{counseling}/feedback', [App\Http\Controllers\PsychologistSummaryController::class, 'storeFeedback']);
     });
 
     // Principal Awareness Dashboard (AND-12)

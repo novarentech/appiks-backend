@@ -16,6 +16,9 @@ class ClinicalSummary extends Model
         'counseling_id',
         'summary_data',
         'raw_payload',
+        'clinical_notes',
+        'rating',
+        'improvement_feedback',
     ];
 
     protected function casts(): array

@@ -221,4 +221,50 @@ test('student consent triggers gemini summary job and psychologist can fetch sum
     expect(array_key_exists('raw_payload', $responseData))->toBeTrue();
     expect(array_key_exists('generated_at', $responseData))->toBeTrue();
     expect(array_key_exists('llm_provider', $responseData))->toBeTrue();
+    expect($responseData['clinical_notes'])->toBeNull();
+    expect($responseData['rating'])->toBeNull();
+    expect($responseData['improvement_feedback'])->toBeNull();
+
+    // 5. Test POST /api/psychologist/referrals/{counseling}/feedback
+    // 5a. Unauthorized student -> 403
+    $this->actingAs($student, 'api')
+        ->postJson("/api/psychologist/referrals/{$counseling->id}/feedback", [
+            'clinical_notes' => 'Catatan tes',
+        ])
+        ->assertStatus(403);
+
+    // 5b. Unauthorized other psychologist -> 403
+    $this->actingAs($otherPsychologist, 'api')
+        ->postJson("/api/psychologist/referrals/{$counseling->id}/feedback", [
+            'clinical_notes' => 'Catatan tes',
+        ])
+        ->assertStatus(403);
+
+    // 5c. Validation error: rating must be good or bad -> 422
+    $this->actingAs($psychologist, 'api')
+        ->postJson("/api/psychologist/referrals/{$counseling->id}/feedback", [
+            'rating' => 'invalid_rating',
+        ])
+        ->assertStatus(422);
+
+    // 5d. Valid feedback submission -> 200
+    $this->actingAs($psychologist, 'api')
+        ->postJson("/api/psychologist/referrals/{$counseling->id}/feedback", [
+            'clinical_notes' => 'Pasien menunjukkan kecemasan situasional yang dipicu oleh tekanan akademik.',
+            'rating' => 'good',
+            'improvement_feedback' => 'Ringkasan akurat dan sangat membantu.',
+        ])
+        ->assertStatus(200)
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('data.clinical_notes', 'Pasien menunjukkan kecemasan situasional yang dipicu oleh tekanan akademik.')
+        ->assertJsonPath('data.rating', 'good')
+        ->assertJsonPath('data.improvement_feedback', 'Ringkasan akurat dan sangat membantu.');
+
+    // 5e. Re-fetch summary to verify persisted clinical notes & feedback
+    $this->actingAs($psychologist, 'api')
+        ->getJson("/api/psychologist/referrals/{$counseling->id}/summary")
+        ->assertStatus(200)
+        ->assertJsonPath('data.clinical_notes', 'Pasien menunjukkan kecemasan situasional yang dipicu oleh tekanan akademik.')
+        ->assertJsonPath('data.rating', 'good')
+        ->assertJsonPath('data.improvement_feedback', 'Ringkasan akurat dan sangat membantu.');
 });
