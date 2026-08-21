@@ -29,7 +29,8 @@ class PsychologistSummaryController extends Controller
      *       nis: string,
      *       class: string|null,
      *       counselor_name: string|null,
-     *       deadline_at: string,
+     *       status: string,
+     *       reported_at: string,
      *     },
      *     sharing: array{
      *       id: int,
@@ -90,7 +91,8 @@ class PsychologistSummaryController extends Controller
             'nis'            => $student->username,
             'class'          => $student->room->name ?? null,
             'counselor_name' => $student->counselor->name ?? $counseling->counselor->name ?? null,
-            'deadline_at'    => $booking->deadline_at,
+            'status'         => $booking->status,
+            'reported_at'    => $counseling->created_at,
         ];
 
         // Related sharing with NLP analysis
