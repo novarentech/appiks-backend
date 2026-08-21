@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('counseling_consents', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('counseling_id')->nullable()->constrained('counselings')->cascadeOnDelete();
+            $table->foreignId('counseling_id')->constrained('counselings')->cascadeOnDelete();
             $table->enum('status', ['pending', 'granted', 'rejected'])->default('pending');
             $table->json('scopes')->nullable();
             $table->timestamp('granted_at')->nullable();

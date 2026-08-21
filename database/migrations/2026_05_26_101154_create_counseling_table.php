@@ -20,7 +20,7 @@ return new class extends Migration
         Schema::create('counselings', function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(User::class, 'student_id');
-            $table->foreignIdFor(User::class, 'counselor_id');
+            $table->foreignIdFor(User::class, 'counselor_id')->nullable();
             $table->foreignIdFor(Sharing::class);
             $table->string('room')->nullable();
             $table->string('notes')->nullable();

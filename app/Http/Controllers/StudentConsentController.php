@@ -20,16 +20,12 @@ class StudentConsentController extends Controller
      * @param Counseling $counseling
      * @return JsonResponse
      */
-    public function show(Counseling $counseling): JsonResponse
+    public function show(CounselingConsent $consent): JsonResponse
     {
         // Authorize view via CounselingPolicy viewStudent method
-        Gate::authorize('viewStudent', $counseling);
+        Gate::authorize('view', $consent);
 
-        $consent = $counseling->latestConsent;
-
-        if (!$consent) {
-            return $this->error('No consent requests found for this counseling session.', 404);
-        }
+        $consent->load('counseling');   
 
         return $this->success($consent, 'Active consent request details retrieved.');
     }
