@@ -30,6 +30,7 @@ class PsychologistSummaryController extends Controller
      *       class: string|null,
      *       counselor_name: string|null,
      *       status: string,
+     *       priority: string,
      *       deadline_at: string,
      *       reported_at: string,
      *     },
@@ -93,6 +94,7 @@ class PsychologistSummaryController extends Controller
             'class'          => $student->room->name ?? null,
             'counselor_name' => $student->counselor->name ?? $counseling->counselor->name ?? null,
             'status'         => $booking->status,
+            'priority'       => $counseling->sharing->priority,
             'deadline_at'    => $booking->deadline_at,
             'reported_at'    => $counseling->created_at,
         ];
