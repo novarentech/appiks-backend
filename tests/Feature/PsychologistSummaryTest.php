@@ -238,7 +238,7 @@ test('student consent triggers gemini summary job and psychologist can fetch sum
         ->assertJsonPath('data.sharing.priority', 'tinggi')
         ->assertJsonPath('data.sharing.nlp.flag', 'Red')
         ->assertJsonPath('data.sharing.nlp.response.zone_status', 'Red')
-        ->assertJsonPath('data.llm_provider', 'gemini-2.5-flash')
+        ->assertJsonPath('data.llm_provider', 'gemini-3.5-flash-lite')
         ->assertJsonPath('data.summary_text', $summary->summary_data);
 
     $responseData = $response->json('data');

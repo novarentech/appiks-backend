@@ -123,7 +123,7 @@ class PsychologistSummaryController extends Controller
             'student'              => $studentIdentity,
             'sharing'              => $sharingData,
             'generated_at'         => $summary->updated_at,
-            'llm_provider'         => 'gemini-2.5-flash',
+            'llm_provider'         => 'gemini-3.5-flash-lite',
             'summary_text'         => $summary->summary_data,
             'raw_payload'          => $summary->raw_payload,
             'clinical_notes'       => $summary->clinical_notes,
