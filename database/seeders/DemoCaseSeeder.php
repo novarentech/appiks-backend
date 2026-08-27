@@ -63,6 +63,24 @@ User::factory()->create([
             ]);
         }
         
+        User::create([
+            'name' => "Kepala Sekolah",
+            'username' => "kepsek",
+            'verified'=>true,
+            'identifier' => "KS001",
+            'password' => $password,
+            'role' => UserRole::HEADTEACHER->value,
+            'school_id' => 1,
+        ]);
+        User::create([
+            'name' => "Guru TU",
+            'username' => "admintu",
+            'verified'=>true,
+            'identifier' => "TU001",
+            'password' => $password,
+            'role' => UserRole::ADMIN->value,
+            'school_id' => 1,
+        ]);
         // 11 Guru BK Demo
         $bkDemo = User::create([
             'name' => "Guru BK Demo",
