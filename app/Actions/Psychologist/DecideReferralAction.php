@@ -4,8 +4,7 @@ namespace App\Actions\Psychologist;
 
 use App\Enums\BookingStatus;
 use App\Enums\SlotStatus;
-use App\Events\BookingConfirmed;
-use App\Events\BookingRejected;
+use App\Jobs\GenerateGeminiReferralSummaryJob;
 use App\Models\BookingSchedule;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
@@ -24,16 +23,13 @@ class DecideReferralAction
             if ($data['action'] === 'confirm') {
                 $booking->update(['status' => BookingStatus::CONFIRMED->value]);
                 $slot->update(['status' => SlotStatus::CONFIRMED->value]);
-
-                BookingConfirmed::dispatch($booking);
+                GenerateGeminiReferralSummaryJob::dispatch($booking->counseling);
             } elseif ($data['action'] === 'reject') {
                 $booking->update([
                     'status' => BookingStatus::REJECTED->value,
                     'reject_reason' => $data['reject_reason']
                 ]);
                 $slot->update(['status' => SlotStatus::AVAILABLE->value]);
-
-                BookingRejected::dispatch($booking);
             }
 
             return $booking->refresh()->load(['slot', 'student', 'counseling']);
