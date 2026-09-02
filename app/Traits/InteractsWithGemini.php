@@ -16,7 +16,7 @@ trait InteractsWithGemini
             if(config('gemini.api_key') == ""){
                 return "===Hasil AI===";
             }
-            $result = Gemini::generativeModel('gemini-3.5-flash-lite')
+            $result = Gemini::generativeModel('gemini-3.1-flash-lite')
                 ->generateContent("INSTRUCTION:\n{$systemInstruction}\n\nDATA:\n{$promptText}");
 
             return $result->text();

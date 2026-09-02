@@ -29,37 +29,27 @@ class GenerateGeminiReferralSummaryJob implements ShouldQueue
             return;
         }
 
-        $scopes = $consent->scopes ?? [];
-        $payload = [];
-        $student = $this->counseling->student;
+        $builder = new \App\Services\ReferralPayloadBuilder();
+        $payload = $builder->buildPayload($this->counseling);
 
-        // 1. Riwayat mood 30 hari (mood_history)
-        if (in_array('mood_history', $scopes)) {
-            $payload['mood_history'] = MoodRecord::where('user_id', $student->id)
-                ->where('recorded', '>=', now()->subDays(30)->toDateString())
-                ->select('recorded', 'status')
-                ->orderByDesc('recorded')
-                ->get();
-        }
-
-        // 2. Curhat 30 hari terakhir (sharing_history)
-        if (in_array('sharing_history', $scopes) || in_array('sharings', $scopes) || in_array('incidents', $scopes)) {
-            $payload['sharing_history'] = Sharing::where('user_id', $student->id)
-                ->where('created_at', '>=', now()->subDays(30))
-                ->select('title', 'description', 'priority', 'created_at')
-                ->orderByDesc('created_at')
-                ->get();
-        }
-
-        // 3. Catatan guru BK (assesment_logs)
-        if (in_array('assesment_logs', $scopes) || in_array('counseling_logs', $scopes)) {
-            $payload['assesment_logs'] = $this->counseling->logs()
-                ->select('session_mode', 'clinical_notes', 'resolution_status', 'created_at')
-                ->get();
-        }
-
-        // Prompt Engineering
-        $systemInstruction = "Anda adalah asisten perangkum data faktual. Tugas Anda adalah merangkum log obrolan dan catatan perilaku siswa untuk membantu persiapan psikolog klinis.\nATURAN MUTLAK:\n- Panjang teks MAKSIMAL 200 kata.\n- Gunakan Bahasa Indonesia formal, profesional, dan objektif.\n- Anda DILARANG KERAS memberikan diagnosis klinis, menyebutkan nama gangguan mental, atau memberikan saran pengobatan.\n- Rangkum HANYA fakta, pemicu (triggers) yang terlihat dari teks, dan tindakan awal berdasarkan data yang diberikan.\n- Jangan menambahkan opini, asumsi, atau informasi di luar data yang diberikan.";
+        $systemInstruction = "Anda adalah asisten AI terintegrasi di APPIKS, sebuah platform kesehatan mental sekolah.\n\n"
+        . "Tugas Anda adalah menghasilkan \"Ringkasan Naratif Rujukan\" untuk Psikolog Mitra berdasarkan data rujukan siswa.\n\n"
+        . "SCOPE CONSENT KATEGORI DATA:\n"
+        . "- Riwayat Mood (mood_history)\n"
+        . "- Curhat Siswa (sharing_history)\n"
+        . "- Catatan Konseling BK (assesment_logs)\n\n"
+        . "ATURAN 1 (PENGGUNAAN DATA DAN EVALUASI CONSENT SCOPE):\n"
+        . "- Evaluasi ketersediaan key pada JSON data mentah yang diberikan.\n"
+        . "- Jika key kategori data ADA dalam data mentah (CONSENT = TRUE), rangkum data tersebut ke dalam narasi secara profesional.\n"
+        . "- Jika key kategori data TIDAK ADA dalam data mentah (CONSENT = FALSE), DILARANG mengarang, menebak, atau menyebutkan isi data tersebut.\n\n"
+        . "ATURAN 2 (PENYEBUTAN DATA YANG TIDAK DIBAGIKAN):\n"
+        . "Secara eksplisit sebutkan kategori data (dari 3 scope: Riwayat Mood, Curhat Siswa, Catatan Konseling BK) yang tidak diizinkan atau tidak dibagikan oleh siswa jika key-nya tidak ada pada data mentah.\n\n"
+        . "ATURAN 3 (DATA MASKING PADA RED ZONE):\n"
+        . "Jika mengutip isi Curhat Red Zone, ganti kata-kata sensitif terkait bunuh diri, self-harm, kekerasan, atau nama spesifik orang lain dengan frasa \"[kata kunci disamarkan]\".\n\n"
+        . "ATURAN 4 (DISCLAIMER WAJIB):\n"
+        . "DILARANG melakukan diagnosis psikologis. Setiap ringkasan WAJIB diakhiri dengan disclaimer: \"Catatan: Ringkasan ini dibuat secara otomatis oleh sistem AI APPIKS untuk membantu rujukan dan bukan merupakan diagnosis psikologis resmi.\"\n\n"
+        . "ATURAN 5 (FORMAT OUTPUT):\n"
+        . "Hasilkan output hanya dalam 1 paragraf yang mengalir secara natural dan profesional. Jangan gunakan bullet points. Mulai selalu dengan format: \"Siswa kelas [Tingkat] berusia [Usia] tahun, dirujuk Guru BK dengan tingkat keparahan [Tingkat Keparahan].\"";
 
         $promptText = "Berikut adalah data mentah:\n" . json_encode($payload);
 
