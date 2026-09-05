@@ -63,7 +63,6 @@ class AppServiceProvider extends ServiceProvider
         );
         User::observe(UserObserver::class);
         Cloud::observe(CloudObserver::class);
-        Sharing::observe(SharingObserver::class);
         CounselingLog::observe(CounselingLogObserver::class);
         Counseling::observe(CounselingObserver::class);
     }

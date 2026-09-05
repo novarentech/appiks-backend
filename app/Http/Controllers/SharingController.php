@@ -9,6 +9,7 @@ use App\Enums\UserRole;
 use App\Http\Requests\CreateSharingRequest;
 use App\Http\Requests\ReplySharingRequest;
 use App\Http\Resources\SharingResource;
+use App\Jobs\ProcessNlpAnalysisJob;
 use App\Models\Sharing;
 use App\Models\User;
 use App\Traits\ApiResponder;
@@ -34,7 +35,7 @@ class SharingController extends Controller
     {
         $user = Auth::user();
         if ($user->role == UserRole::STUDENT->value) {
-            $sharings = $user->sharing()->with(['user', 'nlp','counseling'])->orderBy('replied_at')->get();
+            $sharings = $user->sharing()->with(['user', 'nlp', 'counseling'])->orderBy('replied_at')->get();
         } elseif ($user->role == UserRole::COUNSELOR->value) {
             $sharings = Sharing::with(['user', 'user.room', 'nlp'])->whereIn('user_id', $user->counselored->pluck('id'))->get();
         } else {
@@ -77,6 +78,12 @@ class SharingController extends Controller
     public function store(CreateSharingRequest $request)
     {
         $sharing = Sharing::create($request->all());
+
+        $nlpAnalysis = $sharing->nlp()->create([
+            'text' => $sharing->description,
+        ]);
+
+        ProcessNlpAnalysisJob::dispatchSync($nlpAnalysis);
 
         return $this->created(new SharingResource($sharing->load(['nlp', 'counseling'])));
     }
@@ -147,7 +154,7 @@ class SharingController extends Controller
     public function falsePositive(Request $request, Sharing $sharing)
     {
         Gate::authorize('falsePositive', $sharing);
-        $request->validate(['reason'=>['string','max:255','required']]);
+        $request->validate(['reason' => ['string', 'max:255', 'required']]);
         $sharing->update([
             'priority' => 'rendah',
             'status' => ReportStatus::BUKAN_URGENT->value,
