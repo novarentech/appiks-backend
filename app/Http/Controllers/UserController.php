@@ -27,75 +27,75 @@ use Dedoc\Scramble\Attributes\ExcludeRouteFromDocs;
 class UserController extends Controller
 {
     use ApiResponder;
-    
+
     /**
      * Get all students data
-    */
+     */
     #[Group('User')]
     #[ExcludeRouteFromDocs]
     public function getStudents()
     {
         $role = Auth::user()->role;
         $role = $role == UserRole::TEACHER->value ? 'mentor' : 'counselor';
-        $students = User::with(['room', 'mentor', 'lastmoodres'])->whereRole(UserRole::STUDENT->value)->where($role.'_id', Auth::id())->get();
-        
+        $students = User::with(['room', 'mentor', 'lastmoodres'])->whereRole(UserRole::STUDENT->value)->where($role . '_id', Auth::id())->get();
+
         return $this->success(UserResource::collection($students));
     }
-    
+
     /**
      * Get latest 3 user
-    */
+     */
     #[Group('User')]
     #[ExcludeRouteFromDocs]
     public function getLatestUser()
     {
         $users = Auth::user()->school->users()
-        ->latest()
-        ->limit(3)
-        ->get();
+            ->latest()
+            ->limit(3)
+            ->get();
 
         return $this->success(UserResource::collection($users));
     }
-    
+
     /**
      * Get user count created today
-    */
+     */
     #[Group('User')]
     #[ExcludeRouteFromDocs]
     public function getTodayUser()
     {
         $users = Auth::user()->school->users()->whereDate('created_at', now())->count();
-        
+
         return $this->success(['count' => (int) $users]);
     }
-    
+
     /**
      * Create new admin of the school
-    */
+     */
     #[Group('User')]
     #[ExcludeRouteFromDocs]
     public function adminCreate(CreateAdminRequest $request)
     {
         $user = User::create($request->all());
-        
+
         return $this->success(new UserResource($user));
     }
-    
+
     /**
      * Create new user at the school
-    */
+     */
     #[Group('User')]
     #[ExcludeRouteFromDocs]
     public function store(CreateUserRequest $request)
     {
         $user = User::create($request->all());
-        
+
         return $this->success(new UserResource($user));
     }
-    
+
     /**
      * Delete user
-    */
+     */
     #[Group('User')]
     #[ExcludeRouteFromDocs]
     public function destroy(User $user)
@@ -106,32 +106,32 @@ class UserController extends Controller
             } elseif ($auth->role == UserRole::SUPER->value) {
                 return $user->role == UserRole::ADMIN->value;
             }
-            
+
             return false;
         });
         $copy = $user->toArray();
         $user->delete();
-        
+
         return $this->delete($copy);
     }
-    
+
     /**
      * Get all users data at one school
-    */
+     */
     #[Group('User')]
     #[ExcludeRouteFromDocs]
     public function getUsers()
     {
         $users = User::with(['room', 'mentor'])->whereSchoolId(Auth::user()->school_id)->get();
-        
+
         return $this->success(UserResource::collection($users));
     }
-    
+
     /**
      * Get all users data by its type
-    *
-    * Jika dilakukan oleh Super Admin maka semua data didalam Sistem, selainnya maka hanya di sekolah tersebut
-    */
+     *
+     * Jika dilakukan oleh Super Admin maka semua data didalam Sistem, selainnya maka hanya di sekolah tersebut
+     */
     #[Group('User')]
     public function getUsersByType(string $type)
     {
@@ -143,49 +143,50 @@ class UserController extends Controller
         } else {
             $users = User::whereRole($type)->whereSchoolId(Auth::user()->school_id)->get();
         }
-        
+
         return $this->success(UserResource::collection($users));
     }
-    
+
     /**
      * Get user data by username
-    */
+     */
     #[Group('User')]
-    #[ExcludeRouteFromDocs]
     public function getUserDetail(string $username)
     {
         $user = User::with(['school', 'room', 'mentor', 'counselor'])->where('username', $username)->first();
-        
+        if ($user->role == UserRole::PSYCHOLOGIST->value) {
+            $user->load('psychologistProfile');
+        }
         return $this->success(new UserResource($user));
     }
-    
+
     /**
      * Get template for bulk create
-    */
+     */
     #[Group('User')]
     #[ExcludeRouteFromDocs]
     public function getTemplate()
     {
-        return $this->success(['link' => config('app.url').'/templates/Template%20Siswa.xlsx']);
+        return $this->success(['link' => config('app.url') . '/templates/Template%20Siswa.xlsx']);
     }
-    
+
     /**
      * Update user profile on first login
-    */
+     */
     #[Group('User')]
     #[ExcludeRouteFromDocs]
     public function profile(UserFirstLoginRequest $request)
     {
         Auth::user()->update($request->all());
-        
+
         return $this->success(new UserResource(Auth::user()), 'Success update user profile');
     }
-    
+
     /**
      * Edit user data (by admin)
-    *
-    * Kalau yang diedit adalah siswa maka butuh room_id (berupa 8 karakter kode kelas) dan mentor_id (berupa NIP Guru Wali). Jika admin yang diedit maka butuh school_id. Selainnya hanya username, phone, identifier, name, dan password
-    */
+     *
+     * Kalau yang diedit adalah siswa maka butuh room_id (berupa 8 karakter kode kelas) dan mentor_id (berupa NIP Guru Wali). Jika admin yang diedit maka butuh school_id. Selainnya hanya username, phone, identifier, name, dan password
+     */
     #[Group('User')]
     #[ExcludeRouteFromDocs]
     public function edit(UpdateUserRequest $request, User $user)
@@ -193,7 +194,7 @@ class UserController extends Controller
         Gate::allowIf(function (User $auth) use ($user) {
             return ($auth->role == UserRole::ADMIN->value && $auth->school_id == $user->school_id) || ($auth->role == UserRole::SUPER->value);
         });
-        
+
         $data = $request->validated();
 
         // Resolve room_id dari code ke ID (khusus student)
@@ -205,21 +206,21 @@ class UserController extends Controller
                 $data['mentor_id'] = User::whereIdentifier($data['mentor_id'])->value('id');
             }
         }
-        
+
         if (! empty($data['password'])) {
             $data['password'] = Hash::make($data['password']);
         } else {
             unset($data['password']);
         }
-        
+
         $user->update($data);
-        
+
         return $this->success(new UserResource($user), 'Success update user profile');
     }
-    
+
     /**
      * Update user profile
-    */
+     */
     #[Group('User')]
     #[ExcludeRouteFromDocs]
     public function editProfile(Request $request)
@@ -230,13 +231,13 @@ class UserController extends Controller
             'phone' => "string|unique:users,phone,{$user->id}",
         ]);
         Auth::user()->update($request->all());
-        
+
         return $this->success(new UserResource(Auth::user()), 'Success update user profile');
     }
-    
+
     /**
      * Create student bulk with excel
-    */
+     */
     #[Group('User')]
     #[ExcludeRouteFromDocs]
     public function bulkCreate(Request $request)
@@ -247,7 +248,7 @@ class UserController extends Controller
         $file = $request->file('file');
         if ($file->getSize() > 30 * 1024) {
             Excel::import(new UsersImport(Auth::user()->school_id), $file);
-            
+
             return $this->success(null, 'Your data will insert async');
         } else {
             $import = new UsersImportSync(Auth::user()->school_id);
@@ -261,16 +262,16 @@ class UserController extends Controller
             }
         }
     }
-    
+
     /**
      * Create single student
-    */
+     */
     #[Group('User')]
     #[ExcludeRouteFromDocs]
     public function studentCreate(CreateStudentRequest $request)
     {
         $student = User::create($request->all());
-        
+
         return $this->created(new UserResource($student));
     }
 }

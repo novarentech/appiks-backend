@@ -113,7 +113,7 @@ Route::middleware('auth:api')->group(function () {
     Route::apiResource('quote', QuoteController::class)->except(['update']);
     Route::apiResource('mood_record', MoodRecordController::class)->except(['destroy', 'update']);
     Route::apiResource('school', SchoolController::class);
-    Route::apiResource('counseling', CounselingController::class)->only(['store', 'show','index']);
+    Route::apiResource('counseling', CounselingController::class)->only(['store', 'show', 'index']);
     Route::post('counseling-logs', [CounselingController::class, 'storeLog']);
     Route::post('counseling/{counseling}/consent', [CounselingController::class, 'sendConsent']);
     Route::prefix('admin')->group(function () {
@@ -143,7 +143,7 @@ Route::middleware('auth:api')->group(function () {
             Route::get('student', 'getStudents');
             Route::get('users', 'getUsers');
             Route::get('users/{username}', 'getUserDetail');
-            Route::get('users/type/{type}', 'getUsersByType')->whereIn('type', ['student', 'teacher', 'counselor', 'headteacher', 'admin','psychologist']);
+            Route::get('users/type/{type}', 'getUsersByType')->whereIn('type', ['student', 'teacher', 'counselor', 'headteacher', 'admin', 'psychologist']);
             Route::get('latest-user', 'getLatestUser');
             Route::get('today-user', 'getTodayUser');
             Route::post('users', 'store');
