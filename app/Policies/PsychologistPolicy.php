@@ -34,7 +34,7 @@ class PsychologistPolicy
     /**
      * Determine whether the user can update the psychologist.
      */
-    public function update(User $user, User $psychologist): bool
+    public function update(User $user): bool
     {
         return $user->role === UserRole::SUPER->value;
     }
@@ -42,7 +42,7 @@ class PsychologistPolicy
     /**
      * Determine whether the user can delete the psychologist.
      */
-    public function delete(User $user, User $psychologist): bool
+    public function delete(User $user): bool
     {
         return $user->role === UserRole::SUPER->value;
     }
