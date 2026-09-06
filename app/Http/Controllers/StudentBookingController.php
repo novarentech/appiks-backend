@@ -21,6 +21,26 @@ class StudentBookingController extends Controller
      * Get available dates
      *
      * Retrieve available consultation dates for a counseling referral.
+     *
+     * @response array{
+     *   success: true,
+     *   message: string,
+     *   data: array{
+     *     psychologist: array{
+     *       name: string,
+     *       facility_name: string,
+     *       specialization: string
+     *     },
+     *     earliest_available_date: string|null,
+     *     available_dates: array<array{
+     *       date_raw: string,
+     *       date_formatted: string,
+     *       available_slots_count: int,
+     *       slot_label: string,
+     *       is_selectable: bool
+     *     }>
+     *   }
+     * }
      */
     public function availableDates(Counseling $counseling, GetAvailableDatesAction $action): JsonResponse
     {

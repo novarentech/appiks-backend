@@ -19,13 +19,46 @@ class StudentConsentController extends Controller
      *
      * @param Counseling $counseling
      * @return JsonResponse
+     *
+     * @response array{
+     *   success: true,
+     *   message: string,
+     *   data: array{
+     *     id: int,
+     *     counseling_id: int,
+     *     status: string,
+     *     scopes: array<string, mixed>|null,
+     *     granted_at: string|null,
+     *     rejected_at: string|null,
+     *     counseling: array{
+     *       psychologist: array{
+     *         id: int,
+     *         name: string,
+     *         psychologist_profile: array{
+     *           id: int,
+     *           str_number: string,
+     *           specialization: string|null,
+     *           institution_name: string,
+     *           phone_number: string|null,
+     *           is_active: bool
+     *         }|null
+     *       }|null
+     *     }
+     *   }
+     * }
      */
     public function show(Counseling $counseling): JsonResponse
     {
         // Authorize view via CounselingPolicy viewStudent method
         Gate::authorize('viewStudent', $counseling);
 
-        $consent = $counseling->latestConsent;
+        $consentQuery = $counseling->latestConsent();
+
+        if ($counseling->psychologist_id) {
+            $consentQuery->with('counseling.psychologist.psychologistProfile');
+        }
+
+        $consent = $consentQuery->first();
 
         if (!$consent) {
             return $this->error('No consent requests found for this counseling session.', 404);

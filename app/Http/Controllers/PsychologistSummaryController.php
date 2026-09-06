@@ -3,11 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Enums\BookingStatus;
+use App\Enums\MoodStatus;
+use App\Actions\BuildMoodRecapAction;
 use App\Http\Requests\StoreClinicalSummaryFeedbackRequest;
+use App\Http\Resources\CounselingResource;
+use App\Http\Resources\MoodRecordResource;
+use App\Http\Resources\SharingResource;
 use App\Models\BookingSchedule;
 use App\Models\ClinicalSummary;
 use App\Models\Counseling;
+use App\Models\MoodRecord;
+use App\Models\Sharing;
 use App\Traits\ApiResponder;
+use Carbon\Carbon;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\JsonResponse;
 
@@ -184,5 +192,165 @@ class PsychologistSummaryController extends Controller
             'improvement_feedback' => $summary->improvement_feedback,
             'updated_at'           => $summary->updated_at,
         ], 'Catatan klinis dan masukan berhasil disimpan.');
+    }
+
+    /**
+     * Get a student's mood recap for the latest 30 calendar days.
+     *
+     * @response array{
+     *   success: true,
+     *   message: string,
+     *   data: array{
+     *     student: array{
+     *       id: int,
+     *       name: string,
+     *       nis: string,
+     *       class: string|null
+     *     },
+     *     recap: array{happy: int, angry: int, sad: int, neutral: int},
+     *     mean: "secure"|"insecure",
+     *     secure: int,
+     *     insecure: int,
+     *     moods: array<array{recorded: string, status: string}>
+     *   }
+     * }
+     */
+    #[Group('Mood Record')]
+    public function getSharingMonthlyRecap(
+        Counseling $counseling,
+        BuildMoodRecapAction $recapAction
+    ): JsonResponse {
+        $counseling->load('student.room');
+        $student = $counseling->student;
+        $endDate = Carbon::today();
+        $startDate = $endDate->copy()->subDays(29);
+
+        $mood = MoodRecord::where('user_id', $counseling->student_id)
+            ->whereBetween('recorded', [$startDate->toDateString(), $endDate->toDateString()])
+            ->orderBy('recorded')
+            ->get();
+
+        ['recap' => $recap, 'mean' => $mean, 'secure' => $secure, 'insecure' => $insecure] = $recapAction->handle($mood);
+
+        return $this->success([
+            'student' => [
+                'id'    => $student->id,
+                'name'  => $student->name,
+                'nis'   => $student->username,
+                'class' => $student->room?->name,
+            ],
+            'recap' => [
+                MoodStatus::HAPPY->value   => (int) ($recap[MoodStatus::HAPPY->value] ?? 0),
+                MoodStatus::ANGRY->value   => (int) ($recap[MoodStatus::ANGRY->value] ?? 0),
+                MoodStatus::SAD->value     => (int) ($recap[MoodStatus::SAD->value] ?? 0),
+                MoodStatus::NEUTRAL->value => (int) ($recap[MoodStatus::NEUTRAL->value] ?? 0),
+            ],
+            'mean' => $mean,
+            'secure' => $secure,
+            'insecure' => $insecure,
+            'moods' => MoodRecordResource::collection($mood),
+        ]);
+    }
+
+    /**
+     * Get a student's sharing records for the latest 30 calendar days.
+     *
+     * @response array{
+     *   success: true,
+     *   message: string,
+     *   data: array{
+     *     student: array{
+     *       id: int,
+     *       name: string,
+     *       nis: string,
+     *       class: string|null
+     *     },
+     *     sharings: array<array<string, mixed>>
+     *   }
+     * }
+     */
+    #[Group('Sharing')]
+    public function getStudentSharing(Counseling $counseling): JsonResponse
+    {
+        $profile = auth()->user()->psychologistProfile;
+        if (!$profile) {
+            abort(403, 'Hanya psikolog yang dapat mengakses halaman ini.');
+        }
+
+        $hasBooking = BookingSchedule::where('counseling_id', $counseling->id)
+            ->where('status', BookingStatus::CONFIRMED->value)
+            ->whereHas('slot', function ($query) use ($profile) {
+                $query->where('psychologist_id', $profile->id);
+            })
+            ->exists();
+
+        if (!$hasBooking) {
+            abort(403, 'Akses ditolak. Anda tidak memiliki rujukan aktif untuk sesi ini.');
+        }
+
+        $counseling->load('student.room');
+        $student = $counseling->student;
+        $endDate = Carbon::today();
+        $startDate = $endDate->copy()->subDays(29);
+
+        $sharings = Sharing::where('user_id', $counseling->student_id)
+            ->whereBetween('created_at', [$startDate->startOfDay(), $endDate->endOfDay()])
+            ->with(['nlp', 'counseling'])
+            ->latest()
+            ->get();
+
+        return $this->success([
+            'student' => [
+                'id'    => $student->id,
+                'name'  => $student->name,
+                'nis'   => $student->username,
+                'class' => $student->room?->name,
+            ],
+            'sharings' => SharingResource::collection($sharings),
+        ], 'Student sharing records retrieved.');
+    }
+
+    /**
+     * Get the latest counseling for the student with an assigned counselor.
+     *
+     * @response array{
+     *   success: true,
+     *   message: string,
+     *   data: array<string, mixed>
+     * }
+     */
+    #[Group('Counseling')]
+    public function getLatestCounseling(Counseling $counseling): JsonResponse
+    {
+        $profile = auth()->user()->psychologistProfile;
+        if (!$profile) {
+            abort(403, 'Hanya psikolog yang dapat mengakses halaman ini.');
+        }
+
+        $hasBooking = BookingSchedule::where('counseling_id', $counseling->id)
+            ->where('status', BookingStatus::CONFIRMED->value)
+            ->whereHas('slot', function ($query) use ($profile) {
+                $query->where('psychologist_id', $profile->id);
+            })
+            ->exists();
+
+        if (!$hasBooking) {
+            abort(403, 'Akses ditolak. Anda tidak memiliki rujukan aktif untuk sesi ini.');
+        }
+
+        $latestCounseling = Counseling::where('student_id', $counseling->student_id)
+            ->whereNotNull('counselor_id')
+            ->with(['student.room', 'counselor', 'sharing', 'psychologist'])
+            ->latest()
+            ->first();
+
+        if (!$latestCounseling) {
+            return $this->error('No counseling with an assigned counselor found.', 404);
+        }
+
+        return $this->success(
+            new CounselingResource($latestCounseling),
+            'Latest counseling retrieved.'
+        );
     }
 }

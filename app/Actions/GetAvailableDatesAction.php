@@ -24,7 +24,7 @@ class GetAvailableDatesAction
                 ]);
             })
             ->get()
-            ->groupBy(fn ($slot) => $slot->slot_date->toDateString());
+            ->groupBy(fn($slot) => $slot->slot_date->toDateString());
 
         $availableDates = $slots->map(function ($daySlots, $date) {
             $count  = $daySlots->count();

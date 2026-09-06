@@ -181,6 +181,9 @@ Route::middleware('auth:api')->group(function () {
         Route::patch('referrals/{booking}/decide', [App\Http\Controllers\PsychologistReferralController::class, 'decide']);
         Route::get('referrals/{counseling}/summary', [App\Http\Controllers\PsychologistSummaryController::class, 'getSummary']);
         Route::post('referrals/{counseling}/feedback', [App\Http\Controllers\PsychologistSummaryController::class, 'storeFeedback']);
+        Route::get('recap/{counseling}/monthly/sharing', [App\Http\Controllers\PsychologistSummaryController::class, 'getStudentSharing']);
+        Route::get('recap/{counseling}/monthly/mood', [App\Http\Controllers\PsychologistSummaryController::class, 'getSharingMonthlyRecap']);
+        Route::get('recap/{counseling}/monthly/counseling', [App\Http\Controllers\PsychologistSummaryController::class, 'getLatestCounseling']);
     });
 
     // Principal Awareness Dashboard (AND-12)
