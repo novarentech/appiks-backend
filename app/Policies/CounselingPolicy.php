@@ -21,6 +21,6 @@ class CounselingPolicy
      */
     public function viewStudent(User $user, Counseling $counseling): bool
     {
-        return $counseling->student_id == $user->id;
+        return $counseling->student_id == $user->id || $counseling->psychologist_id == $user->id || $counseling->counselor_id == $user->id;
     }
 }
