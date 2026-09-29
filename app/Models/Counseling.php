@@ -53,7 +53,7 @@ class Counseling extends Model
 
     public function bookingSchedule()
     {
-        return $this->hasOne(BookingSchedule::class, 'counseling_id');
+        return $this->hasMany(BookingSchedule::class, 'counseling_id');
     }
 
     protected function casts(){

@@ -9,6 +9,7 @@ use App\Models\NlpAnalysis;
 use Illuminate\Support\Facades\Hash;
 use App\Enums\UserRole;
 use App\Enums\ReportStatus;
+use App\Jobs\ProcessNlpAnalysisJob;
 
 class DemoCaseSeeder extends Seeder
 {
@@ -33,35 +34,6 @@ User::factory()->create([
             'room_id' => null,
             'school_id' => 1,
         ]);
-        
-        // 1-5 Guru BK
-        $counselors = [];
-        for ($i = 1; $i <= 5; $i++) {
-            $counselors[$i] = User::create([
-                'name' => "Guru BK 0{$i}",
-                'verified'=>true,
-                'username' => "bk0{$i}",
-                'identifier' => "BK" . str_pad($i, 4, '0', STR_PAD_LEFT),
-                'password' => $password,
-                'role' => UserRole::COUNSELOR->value,
-                'school_id' => 1,
-            ]);
-        }
-        
-        // 6-10 Siswa
-        $students = [];
-        for ($i = 1; $i <= 5; $i++) {
-            $students[$i] = User::create([
-                'name' => "Siswa 0{$i}",
-                'username' => "siswa0{$i}",
-                'verified'=>true,
-                'identifier' => "SW" . str_pad($i, 4, '0', STR_PAD_LEFT),
-                'password' => $password,
-                'role' => UserRole::STUDENT->value,
-                'counselor_id' => $counselors[$i]->id,
-                'school_id' => 1,
-            ]);
-        }
         
         User::create([
             'name' => "Kepala Sekolah",
@@ -91,80 +63,60 @@ User::factory()->create([
             'role' => UserRole::COUNSELOR->value,
             'school_id' => 1,
         ]);
-        
-        // 12 Siswa Demo 1 & 2
-        $siswaDemo1 = User::create([
-            'name' => "Siswa Demo 1",
-            'username' => "siswademo",
-            'verified'=>true,
-            'identifier' => "SW9991",
-            'password' => $password,
-            'role' => UserRole::STUDENT->value,
-            'counselor_id' => $bkDemo->id,
-            'school_id' => 1,
-        ]);
-
-        $siswaDemo2 = User::create([
-            'name' => "Siswa Demo 2",
-            'username' => "siswademo2",
-            'verified'=>true,
-            'identifier' => "SW9992",
-            'password' => $password,
-            'role' => UserRole::STUDENT->value,
-            'counselor_id' => $bkDemo->id,
-            'school_id' => 1,
-        ]);
-
-        $allStudents = array_merge(array_values($students), [$siswaDemo1, $siswaDemo2]);
-
-        // Setiap siswa memiliki kasus curhat yang sudah melewati NLP (Zona Kuning & Merah)
-        foreach ($allStudents as $siswa) {
-            // Kasus Kuning
+        for ($i=1; $i <= 4 ; $i++) { 
+           $sis = User::create([
+                'name' => "Siswa Demo ".$i,
+                'username' => "siswa". $i,
+                'verified'=>true,
+                'identifier' => "SW000". $i,
+                'password' => $password,
+                'role' => UserRole::STUDENT->value,
+                'counselor_id' => $bkDemo->id,
+                'school_id' => 1,
+            ]);
             $sharingKuning = Sharing::create([
-                'user_id' => $siswa->id,
+                'user_id' => $sis->id,
                 'title' => 'Merasa Hampa',
                 'description' => 'Akhir-akhir ini rasanya hampa, aku gagal terus di semua hal.',
                 'status' => ReportStatus::MENUNGGU_TINJAUAN->value,
                 'priority' => 'rendah',
             ]);
-
-            NlpAnalysis::create([
-                'nlpable_type' => Sharing::class,
-                'nlpable_id' => $sharingKuning->id,
+    
+            $nlpAnalysisKuning = $sharingKuning->nlp()->create([
                 'text' => $sharingKuning->description,
-                'response' => [
-                    'total_score' => 7,
-                    'zone_status' => 'Yellow',
-                    'matched_keywords' => [
-                        ['stem' => 'hampa', 'zone' => 'Yellow', 'weight' => 4],
-                        ['stem' => 'gagal', 'zone' => 'Yellow', 'weight' => 3],
-                    ]
-                ],
-                'flag' => 'Yellow',
             ]);
 
+            ProcessNlpAnalysisJob::dispatchSync($nlpAnalysisKuning);
+    
             // Kasus Merah
             $sharingMerah = Sharing::create([
-                'user_id' => $siswa->id,
+                'user_id' => $sis->id,
                 'title' => 'Capek Banget',
                 'description' => 'Capek banget, kadang kepikiran mau mati aja.',
                 'status' => ReportStatus::MENUNGGU_TINJAUAN->value,
                 'priority' => 'tinggi',
             ]);
-
-            NlpAnalysis::create([
-                'nlpable_type' => Sharing::class,
-                'nlpable_id' => $sharingMerah->id,
+    
+            $nlpAnalysisMerah = $sharingMerah->nlp()->create([
                 'text' => $sharingMerah->description,
-                'response' => [
-                    'total_score' => 9,
-                    'zone_status' => 'Red',
-                    'matched_keywords' => [
-                        ['stem' => 'mau mati', 'zone' => 'Red', 'weight' => 9],
-                    ]
-                ],
-                'flag' => 'Red',
             ]);
+
+            ProcessNlpAnalysisJob::dispatchSync($nlpAnalysisMerah);
+
+            // Kasus Netral / Pembanding (No Trigger)
+            $sharingNetral = Sharing::create([
+                'user_id' => $sis->id,
+                'title' => 'Kegiatan Belajar Hari Ini',
+                'description' => 'Hari ini aku belajar kelompok bersama teman sekelas dan tugas selesai dengan lancar.',
+                'status' => ReportStatus::MENUNGGU_TANGGAPAN->value,
+                'priority' => 'rendah',
+            ]);
+
+            $nlpAnalysisNetral = $sharingNetral->nlp()->create([
+                'text' => $sharingNetral->description,
+            ]);
+
+            ProcessNlpAnalysisJob::dispatchSync($nlpAnalysisNetral);
         }
 
         $this->call([

@@ -264,7 +264,7 @@ class PsychologistReferralController extends Controller
 
         $message = $request->action === 'confirm' 
             ? 'Rujukan berhasil dikonfirmasi.' 
-            : 'Rujukan telah ditolak.';
+            : 'Rujukan telah dijadwalkan ulang.';
 
         return $this->success(new BookingScheduleResource($result), $message);
     }

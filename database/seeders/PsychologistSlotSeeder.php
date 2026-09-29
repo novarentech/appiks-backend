@@ -19,16 +19,17 @@ class PsychologistSlotSeeder extends Seeder
             return;
         }
 
-        // Define Monday and Wednesday dates for next 4 weeks
-        $dates = [
-            '2026-07-28', // fixed historical date for existing tests
-            Carbon::now()->startOfWeek()->toDateString(), // current Monday
-            Carbon::now()->startOfWeek()->addDays(2)->toDateString(), // current Wednesday
-            Carbon::now()->startOfWeek()->addWeek()->toDateString(), // next Monday
-            Carbon::now()->startOfWeek()->addWeek()->addDays(2)->toDateString(), // next Wednesday
-            Carbon::now()->startOfWeek()->addWeeks(2)->toDateString(), // 2 weeks Monday
-            Carbon::now()->startOfWeek()->addWeeks(2)->addDays(2)->toDateString(), // 2 weeks Wednesday
-        ];
+        // Generate Monday and Wednesday dates for 1 month starting from current week
+        $dates = [];
+        $cursor = Carbon::now()->startOfWeek();
+        $endDate = Carbon::now()->addMonth();
+
+        while ($cursor->lte($endDate)) {
+            if ($cursor->isMonday() || $cursor->isWednesday()) {
+                $dates[] = $cursor->toDateString();
+            }
+            $cursor->addDay();
+        }
 
         $timeSlots = [
             ['slot_start_time' => '08:00:00', 'slot_end_time' => '09:00:00'],
@@ -54,6 +55,6 @@ class PsychologistSlotSeeder extends Seeder
             }
         }
 
-        $this->command->info('PsychologistSlotSeeder: Monday and Wednesday 08:00-11:00 slots seeded successfully.');
+        $this->command->info('PsychologistSlotSeeder: Monday and Wednesday 08:00-11:00 slots (3 slots/day for 1 month) seeded successfully.');
     }
 }

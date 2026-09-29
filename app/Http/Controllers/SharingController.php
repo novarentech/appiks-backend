@@ -82,8 +82,11 @@ class SharingController extends Controller
         $nlpAnalysis = $sharing->nlp()->create([
             'text' => $sharing->description,
         ]);
-
-        ProcessNlpAnalysisJob::dispatchSync($nlpAnalysis);
+        try {
+            ProcessNlpAnalysisJob::dispatchSync($nlpAnalysis);
+        } catch (\Throwable $th) {
+            ProcessNlpAnalysisJob::dispatch($nlpAnalysis);
+        }
 
         return $this->created(new SharingResource($sharing->load(['nlp', 'counseling'])));
     }

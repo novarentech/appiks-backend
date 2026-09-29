@@ -14,15 +14,18 @@ class DecideReferralRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'action'        => ['required', 'string', 'in:confirm,reject'],
-            'reject_reason' => ['required_if:action,reject', 'string', 'nullable', 'max:1000'],
+            'action'        => ['required', 'string', 'in:confirm,reschedule'],
+            'reschedule_reason' => ['required_if:action,reschedule', 'string', 'nullable', 'max:1000'],
+            'slot_id' => ['required_if:action,reschedule', 'exists:psychologist_slots,id'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'reject_reason.required_if' => 'Alasan penolakan wajib diisi jika Anda menolak rujukan.',
+            'reschedule_reason.required_if' => 'Alasan penjadwalan ulang wajib diisi jika Anda menolak rujukan.',
+            'slot_id.required_if' => 'Slot wajib diisi jika Anda menolak rujukan.',
+            'slot_id.exists' => 'Slot tidak ditemukan.',
         ];
     }
 }

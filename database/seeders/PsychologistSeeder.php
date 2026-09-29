@@ -22,7 +22,7 @@ class PsychologistSeeder extends Seeder
 
         // Seed primary psychologist: Ermin Emilia, M.Psi., Psikolog
         $ermin = User::firstOrCreate(
-            ['username' => 'ermin_emilia'],
+            ['username' => 'ermin'],
             [
                 'name'       => 'Ermin Emilia, M.Psi., Psikolog',
                 'identifier' => 'STR-19850412-202102-2-001',
@@ -39,19 +39,17 @@ class PsychologistSeeder extends Seeder
             [
                 'str_number'       => 'STR-19850412-202102-2-001',
                 'specialization'   => 'Psikologi Klinis Anak & Remaja',
-                'institution_name' => 'Puskesmas Kec. Menteng',
+                'institution_name' => 'Puskesmas Jetis',
                 'phone_number'     => '081298765432',
                 'is_active'        => true,
             ]
         );
-
-        // Also seed Dr. Sarah Wijaya for existing references/tests
-        $sarah = User::firstOrCreate(
-            ['username' => 'sarah.wijaya@puskesmas-menteng.id'],
+        $yulia = User::firstOrCreate(
+            ['username' => 'yulia'],
             [
-                'name'       => 'Dr. Sarah Wijaya, M.Psi., Psikolog',
-                'identifier' => 'STR-PSI-00101',
-                'phone'      => '081298765433',
+                'name'       => 'Yulia Mukti Rufaida, M.Psi., Psikolog',
+                'identifier' => 'STR-19850412-202102-2-002',
+                'phone'      => '081298765431',
                 'role'       => UserRole::PSYCHOLOGIST->value,
                 'password'   => $password,
                 'verified'   => true,
@@ -60,16 +58,16 @@ class PsychologistSeeder extends Seeder
         );
 
         PsychologistProfile::firstOrCreate(
-            ['user_id' => $sarah->id],
+            ['user_id' => $yulia->id],
             [
-                'str_number'       => 'STR-PSI-00101',
+                'str_number'       => 'STR-19850412-202102-2-002',
                 'specialization'   => 'Psikologi Klinis Anak & Remaja',
-                'institution_name' => 'Puskesmas Kec. Menteng',
-                'phone_number'     => '081298765433',
+                'institution_name' => 'Biro Psikologi Dinamis',
+                'phone_number'     => '081298765431',
                 'is_active'        => true,
             ]
         );
 
-        $this->command->info('PsychologistSeeder: Ermin Emilia and Dr. Sarah Wijaya seeded successfully.');
+        $this->command->info('PsychologistSeeder: Ermin Emilia and Yulia Mukti Rufaida seeded successfully.');
     }
 }
