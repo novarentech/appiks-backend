@@ -44,26 +44,31 @@ class PsychologistSlotController extends Controller
      * Create psychologist slot
      *
      * Publish a new consultation time slot. Prevents past dates, invalid start/end times, and overlapping schedules.
+     *
+     * @bodyParam repeat boolean Opsional. Jika bernilai true, slot akan berulang setiap minggu pada hari dan jam yang sama selama 1 tahun ke depan. Example: false
      */
     #[Group('Psychologist')]
     public function store(StorePsychologistSlotRequest $request, CreatePsychologistSlotAction $action): JsonResponse
     {
-        $slot = $action->handle($request->validated(), auth()->user()->psychologistProfile);
+        $slots = $action->handle($request->validated(), auth()->user()->psychologistProfile);
 
-        return $this->created(new PsychologistSlotResource($slot), 'Slot berhasil ditambahkan.');
+        return $this->created(PsychologistSlotResource::collection($slots), 'Slot berhasil ditambahkan.');
     }
 
     /**
      * Delete psychologist slot
      *
-     * Safely soft-delete an existing consultation time slot. Only allowed if the slot status is 'available'.
+     * Safely soft-delete an existing consultation time slot after today without an active booking schedule.
+     * Supports optional repeat flag to delete recurring weekly slots.
+     *
+     * @queryParam repeat boolean Opsional. Jika true, akan menghapus slot ini dan seluruh rangkaian slot berulang mingguannya yang belum dibooking hingga 1 tahun ke depan. Example: false
      */
     #[Group('Psychologist')]
-    public function destroy(PsychologistSlot $slot, DeletePsychologistSlotAction $action): JsonResponse
+    public function destroy(Request $request, PsychologistSlot $slot, DeletePsychologistSlotAction $action): JsonResponse
     {
         Gate::authorize('delete', $slot);
 
-        $action->handle($slot);
+        $action->handle($slot, $request->boolean('repeat'));
 
         return $this->success(null, 'Slot berhasil dihapus.');
     }

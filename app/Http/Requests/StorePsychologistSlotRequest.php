@@ -19,6 +19,7 @@ class StorePsychologistSlotRequest extends FormRequest
             'slot_date'       => ['required', 'date', 'after_or_equal:today'],
             'slot_start_time' => ['required', 'date_format:H:i'],
             'slot_end_time'   => ['required', 'date_format:H:i'],
+            'repeat'          => ['nullable', 'boolean'],
         ];
     }
 }
