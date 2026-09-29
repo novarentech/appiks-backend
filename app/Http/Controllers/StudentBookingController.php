@@ -44,8 +44,7 @@ class StudentBookingController extends Controller
      */
     public function availableDates(Counseling $counseling, GetAvailableDatesAction $action): JsonResponse
     {
-        // Ownership guard: student must own this counseling
-        abort_if($counseling->student_id !== auth()->id(), 403);
+        abort_if(!in_array(auth()->id(), [$counseling->student_id, $counseling->psychologist_id]), 403);
 
         $profile = $counseling->psychologist->psychologistProfile;
         $data    = $action->handle($counseling);
