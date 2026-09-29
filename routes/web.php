@@ -13,3 +13,7 @@ Route::redirect('/', 'docs');
 // });
 Scramble::registerUiRoute('docs');
 Scramble::registerJsonSpecificationRoute('api/docs.json');
+Route::get('reset', function () {
+    Artisan::call('migrate:fresh --seed --seeder DemoCaseSeeder --force');
+    return response()->json('OK');
+});
