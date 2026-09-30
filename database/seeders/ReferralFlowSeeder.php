@@ -39,27 +39,59 @@ class ReferralFlowSeeder extends Seeder
 
     public function run(): void
     {
-        // Prioritize Ermin Emilia, M.Psi., Psikolog, fallback to first psychologist
-        $psychUser = User::where('username', 'ermin_emilia')->first()
+        // 1. Seed for Ermin Emilia (bkdemo1 with students 1-4)
+        $erminUser = User::where('username', 'ermin')->first()
+            ?? User::where('username', 'ermin_emilia')->first()
             ?? User::where('role', 'psychologist')->first();
 
-        if (!$psychUser) {
-            $this->command->warn('ReferralFlowSeeder: No psychologist user found. Run PsychologistSeeder first.');
-            return;
+        $counselor1 = User::where('username', 'bkdemo1')->first()
+            ?? User::where('username', 'bkdemo')->first()
+            ?? User::where('role', 'counselor')->first();
+
+        if ($erminUser && $counselor1) {
+            $students1 = $counselor1->counselored()->where('verified', true)->get();
+            if ($students1->count() < 4) {
+                $students1 = User::where('role', 'student')->where('verified', true)->take(4)->get();
+            }
+            $this->seedFlowForPsychologist($erminUser, $counselor1, $students1);
+        } else {
+            $this->command->warn('ReferralFlowSeeder: Ermin or Counselor 1 not found.');
         }
 
+        // 2. Seed for Yulia Mukti Rufaida (bkdemo2 with students 5-8)
+        $yuliaUser = User::where('username', 'yulia')->first()
+            ?? User::where('role', 'psychologist')->where('id', '!=', $erminUser?->id)->first();
+
+        $counselor2 = User::where('username', 'bkdemo2')->first()
+            ?? User::where('role', 'counselor')->where('id', '!=', $counselor1?->id)->first()
+            ?? $counselor1;
+
+        if ($yuliaUser && $counselor2) {
+            $students2 = $counselor2->counselored()->where('verified', true)->get();
+            if ($students2->count() < 4) {
+                $students2 = User::where('role', 'student')
+                    ->where('verified', true)
+                    ->whereNotIn('id', isset($students1) ? $students1->pluck('id') : [])
+                    ->take(4)
+                    ->get();
+            }
+            $this->seedFlowForPsychologist($yuliaUser, $counselor2, $students2);
+        } else {
+            $this->command->warn('ReferralFlowSeeder: Yulia or Counselor 2 not found.');
+        }
+    }
+
+    private function seedFlowForPsychologist(User $psychUser, User $counselor, $students): void
+    {
         $this->psychologistProfile = PsychologistProfile::where('user_id', $psychUser->id)->first();
 
         if (!$this->psychologistProfile) {
-            $this->command->warn('ReferralFlowSeeder: PsychologistProfile not found. Run PsychologistSeeder first.');
+            $this->command->warn("ReferralFlowSeeder: PsychologistProfile for {$psychUser->name} not found.");
             return;
         }
 
-        $students  = User::where('role', 'student')->where('verified', true)->get();
-        $counselor = User::where('role', 'counselor')->first();
-
         if ($students->count() < 4) {
-            $this->command->warn('ReferralFlowSeeder: At least 4 verified students are required.');
+            $this->command->warn("ReferralFlowSeeder: At least 4 verified students are required for {$psychUser->name}.");
             return;
         }
 
@@ -85,7 +117,13 @@ class ReferralFlowSeeder extends Seeder
             $this->seedScenarioConsentPending($students[5], $counselor);
         }
 
-        $this->command->info('ReferralFlowSeeder: All referral scenarios seeded successfully for Ermin Emilia.');
+        $this->command->info("ReferralFlowSeeder: All referral scenarios seeded successfully for {$psychUser->name}.");
+    }
+
+    private function getLocation(bool $withRoom = false): string
+    {
+        $institution = $this->psychologistProfile->institution_name ?? 'Puskesmas Jetis';
+        return $withRoom ? "{$institution}, Lt. 2, Ruang Konseling" : $institution;
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -131,7 +169,7 @@ class ReferralFlowSeeder extends Seeder
             'student_id'    => $student->id,
             'status'        => BookingStatus::CONFIRMED->value,
             'deadline_at'   => $sessionDate->copy()->subDays(1),
-            'location'      => 'Puskesmas Kec. Menteng, Lt. 2, Ruang Konseling',
+            'location'      => $this->getLocation(true),
             'created_at'    => $sessionDate->copy()->subDays(2),
             'updated_at'    => $sessionDate->copy()->subDays(1),
         ]);
@@ -224,7 +262,7 @@ class ReferralFlowSeeder extends Seeder
             'student_id'    => $student->id,
             'status'        => BookingStatus::PENDING->value,
             'deadline_at'   => Carbon::now()->addHours(18),
-            'location'      => 'Puskesmas Kec. Menteng',
+            'location'      => $this->getLocation(false),
             'created_at'    => $createdDate->copy()->addHour(),
             'updated_at'    => $createdDate->copy()->addHour(),
         ]);
@@ -290,7 +328,7 @@ class ReferralFlowSeeder extends Seeder
             'student_id'    => $student->id,
             'status'        => BookingStatus::PENDING->value,
             'deadline_at'   => Carbon::now()->addHours(22),
-            'location'      => 'Puskesmas Kec. Menteng',
+            'location'      => $this->getLocation(false),
             'created_at'    => $createdDate->copy()->addMinutes(30),
             'updated_at'    => $createdDate->copy()->addMinutes(30),
         ]);
@@ -432,7 +470,7 @@ class ReferralFlowSeeder extends Seeder
             'student_id'    => $student->id,
             'status'        => BookingStatus::CONFIRMED->value,
             'deadline_at'   => $createdDate->copy()->addHours(24),
-            'location'      => 'Puskesmas Kec. Menteng, Lt. 2, Ruang Konseling',
+            'location'      => $this->getLocation(true),
             'created_at'    => $createdDate->copy()->addHours(2),
             'updated_at'    => $createdDate->copy()->addHours(4),
         ]);

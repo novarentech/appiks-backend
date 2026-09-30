@@ -199,9 +199,9 @@ class PsychologistReferralController extends Controller
         // Filter: priority
         if ($request->filled('priority')) {
             $priority = strtolower(trim($request->input('priority')));
-            $priorityValue = in_array($priority, ['kritis', 'tinggi']) ? 'tinggi' : 'rendah';
+            $priorityValue = $priority == 'kritis' ? ['tinggi'] : ['rendah','sedang'];
 
-            $sharingIds = \App\Models\Sharing::where('priority', $priorityValue)->pluck('id');
+            $sharingIds = \App\Models\Sharing::whereIn('priority', $priorityValue)->pluck('id');
             $counselingIds = Counseling::whereIn('sharing_id', $sharingIds)->pluck('id');
 
             $query->whereIn('counseling_id', $counselingIds);
