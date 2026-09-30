@@ -28,14 +28,19 @@ class CounselingController extends Controller
      * Get all counseling
      *
      * Mendapatkan semua data sesi konseling (khusus siswa)
+     * 
+     * @param  string  $type  internal | external
      */
     #[Group('Counseling')]
     public function index(Request $request){
+        $request->validate([
+            'type'=>'nullable|in:internal,external'
+        ]);
         $type = $request->filled('type') ? $request->type : 'internal';
         if (Auth::user()->role != UserRole::STUDENT->value) {
             return $this->error('Only student can access this endpoint',403);
         }
-        $counselings = Counseling::with(['student', 'counselor', 'sharing','psychologist'])
+        $counselings = Counseling::with(['student', 'counselor', 'sharing','psychologist','psychologist.psychologistProfile'])
             ->where('student_id', Auth::id())
             ->where('type', $type)
             ->get();

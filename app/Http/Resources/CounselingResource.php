@@ -14,7 +14,13 @@ class CounselingResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $room = $this->room;
+        if ($this->type == 'external' && $this->relationLoaded('psychologist') && $this->psychologist?->relationLoaded('psychologistProfile')) {
+            $room = $this->psychologist->psychologistProfile?->institution_name ?? $room;
+        }
+
         return array_merge(parent::toArray($request), [
+            'room' => $room,
             'student' => new UserResource($this->whenLoaded('student')),
             'counselor' => new UserResource($this->whenLoaded('counselor')),
             'sharing' => new SharingResource($this->whenLoaded('sharing')),
