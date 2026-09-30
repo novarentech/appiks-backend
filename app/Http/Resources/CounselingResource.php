@@ -19,12 +19,16 @@ class CounselingResource extends JsonResource
             $room = $this->psychologist->psychologistProfile?->institution_name ?? $room;
         }
 
-        return array_merge(parent::toArray($request), [
+        $data = parent::toArray($request);
+        unset($data['latest_booking_schedule']);
+
+        return array_merge($data, [
             'room' => $room,
             'student' => new UserResource($this->whenLoaded('student')),
             'counselor' => new UserResource($this->whenLoaded('counselor')),
             'sharing' => new SharingResource($this->whenLoaded('sharing')),
             'psychologist' => new UserResource($this->whenLoaded('psychologist')),
+            'slot' => $this->whenLoaded('latestBookingSchedule', fn () => $this->latestBookingSchedule?->slot),
         ]);
     }
 }

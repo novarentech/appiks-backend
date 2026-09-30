@@ -56,6 +56,11 @@ class Counseling extends Model
         return $this->hasMany(BookingSchedule::class, 'counseling_id');
     }
 
+    public function latestBookingSchedule()
+    {
+        return $this->hasOne(BookingSchedule::class, 'counseling_id')->latestOfMany();
+    }
+
     protected function casts(){
         return [
             'resolution' => CounselingResolution::class,

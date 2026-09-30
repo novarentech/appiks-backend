@@ -32,15 +32,16 @@ class CounselingController extends Controller
      * @param  string  $type  internal | external
      */
     #[Group('Counseling')]
-    public function index(Request $request){
+    public function index(Request $request)
+    {
         $request->validate([
-            'type'=>'nullable|in:internal,external'
+            'type' => 'nullable|in:internal,external'
         ]);
         $type = $request->filled('type') ? $request->type : 'internal';
         if (Auth::user()->role != UserRole::STUDENT->value) {
-            return $this->error('Only student can access this endpoint',403);
+            return $this->error('Only student can access this endpoint', 403);
         }
-        $counselings = Counseling::with(['student', 'counselor', 'sharing','psychologist','psychologist.psychologistProfile'])
+        $counselings = Counseling::with(['student', 'counselor', 'sharing', 'psychologist', 'psychologist.psychologistProfile', 'latestBookingSchedule.slot'])
             ->where('student_id', Auth::id())
             ->where('type', $type)
             ->get();
@@ -52,8 +53,9 @@ class CounselingController extends Controller
      * Membuat sebuah sesi konseling baru baik internal (guru) maupun external (psikologi)
      */
     #[Group('Counseling')]
-    public function store(CreateCounselingRequest $request){
-        $payload = $request->except('date','time');
+    public function store(CreateCounselingRequest $request)
+    {
+        $payload = $request->except('date', 'time');
         // return $this->success($payload);
         $counseling = Counseling::create($payload);
         return $this->success(new CounselingResource($counseling));
@@ -65,31 +67,33 @@ class CounselingController extends Controller
      * Melihat detail sebuah sesi konseling
      */
     #[Group('Counseling')]
-    public function show(Counseling $counseling){
-        $counseling->load(['student','counselor']);
+    public function show(Counseling $counseling)
+    {
+        $counseling->load(['student', 'counselor']);
         return $this->success(new CounselingResource($counseling));
     }
-    
+
     /**
      * Acknowledge counseling request
      *
      * Menyetujui jadwal permintaan konseling (pov siswa)
      */
     #[Group('Counseling')]
-    public function acknowledge(Request $request, Counseling $counseling){
+    public function acknowledge(Request $request, Counseling $counseling)
+    {
         $request->validate([
             'type' => 'required|string|in:accept,decline'
         ]);
-        if ($request->type === 'accept'){
+        if ($request->type === 'accept') {
             $counseling->update([
                 'status' => CounselingStatus::DIJADWALKAN->value
             ]);
-            $counseling->sharing->update(['status'=>ReportStatus::DIJADWALKAN->value]);
-        }else{
+            $counseling->sharing->update(['status' => ReportStatus::DIJADWALKAN->value]);
+        } else {
             $counseling->update([
                 'status' => CounselingStatus::DITOLAK->value
             ]);
-            $counseling->sharing->update(['status'=>ReportStatus::DITOLAK->value]);
+            $counseling->sharing->update(['status' => ReportStatus::DITOLAK->value]);
         }
         return $this->success(new CounselingResource($counseling));
     }
