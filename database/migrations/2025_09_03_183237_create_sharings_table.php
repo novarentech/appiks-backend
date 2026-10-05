@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\SharingAction;
 use App\Models\User;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -20,7 +21,10 @@ return new class extends Migration
             $table->text('reply')->nullable();
             $table->date('replied_at')->nullable();
             $table->string('replied_by')->nullable();
+            $table->string('action_notes')->nullable();
+            $table->boolean('action_confirmed')->default(false);
             $table->enum('priority', ['tinggi', 'rendah'])->default('rendah');
+            $table->enum('action', SharingAction::cases())->default(SharingAction::INTERNAL->value);
             $table->timestamps();
             $table->softDeletes();
         });

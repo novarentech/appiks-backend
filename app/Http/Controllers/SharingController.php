@@ -6,6 +6,7 @@ use App\Enums\CounselingResolution;
 use App\Enums\NlpAnalysisStatus;
 use App\Enums\Priority;
 use App\Enums\ReportStatus;
+use App\Enums\SharingAction;
 use App\Enums\UserRole;
 use App\Http\Requests\CreateSharingRequest;
 use App\Http\Requests\GetSharingRequest;
@@ -24,6 +25,7 @@ use Dedoc\Scramble\Attributes\ExcludeAllRoutesFromDocs;
 use Dedoc\Scramble\Attributes\ExcludeRouteFromDocs;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class SharingController extends Controller
 {
@@ -205,11 +207,19 @@ class SharingController extends Controller
      * Meninjau curhatan siswa dan hanya bisa dilakukan oleh Guru BK siswa tersebut
      */
     #[Group('Sharing')]
-    public function acknowledge(Sharing $sharing)
+    public function acknowledge(Request $request, Sharing $sharing)
     {
+        $request->validate([
+            'action' => ['required', 'string', Rule::enum(SharingAction::class)],
+            'action_notes' => ['required_unless:action,' . SharingAction::INTERNAL->value, 'string'],
+            'action_confirmed' => ['nullable', 'boolean'],
+        ]);
         $sharing->update([
-            'status' => ReportStatus::DITINJAU->value,
+            'status' => $request->action === SharingAction::INTERNAL->value ? ReportStatus::DITINJAU->value : ReportStatus::SELESAI->value,
             'acknowledged_at' => now(),
+            'action' => $request->action ?? SharingAction::INTERNAL->value,
+            'action_notes' => $request->action_notes ?? null,
+            'action_confirmed' => $request->action_confirmed ?? false,
         ]);
 
         return $this->success(new SharingResource($sharing->load(['nlp', 'counseling'])));
