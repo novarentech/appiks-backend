@@ -105,6 +105,7 @@ Route::middleware('auth:api')->group(function () {
         Route::post('buy', 'buy');
         Route::post('claim', 'claim');
     });
+    Route::get('school/me', [SchoolController::class, 'me']);
     Route::get('room/level', [RoomController::class, 'getLevel']);
     Route::get('room/level/{level}', [RoomController::class, 'byLevel'])->whereIn('level', ['X', 'XI', 'XII']);
     Route::apiResource('room', RoomController::class)->only(['index', 'store', 'update', 'destroy', 'show']);

@@ -29,6 +29,7 @@ class SchoolFactory extends Factory
             'city' => $loc->city,
             'province' => $loc->province,
             'address' => "{$loc->district}, {$loc->city}, {$loc->province}",
+            'emergency_contacts'=>[['name'=>'Kontak Darurat Nasional','number'=>'119']]
         ];
     }
 }

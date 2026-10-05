@@ -12,35 +12,40 @@ use Illuminate\Support\Facades\Gate;
 use Dedoc\Scramble\Attributes\ExcludeAllRoutesFromDocs;
 use Dedoc\Scramble\Attributes\ExcludeRouteFromDocs;
 
-#[ExcludeAllRoutesFromDocs]
 class SchoolController extends Controller
 {
     use ApiResponder;
-
+    
     /**
      * Get all schools data
-     *
-     * Hanya bisa diakses oleh super admin
-     */
+    *
+    * Hanya bisa diakses oleh super admin
+    */
     #[Group('School')]
+    #[ExcludeRouteFromDocs]
     public function index()
     {
         Gate::authorize('viewAny', School::class);
         $schools = School::all();
-
+        
         return $this->success(SchoolResource::collection($schools));
     }
-
+    
     /**
      * Create new school
      *
      * Hanya bisa diakses oleh super admin
-     */
+    */
     #[Group('School')]
+    #[ExcludeRouteFromDocs]
     public function store(CreateSchoolRequest $request)
     {
-        $school = School::create($request->validated());
-
+        $data = $request->validated();
+        if (empty($data['emergency_contacts'])) {
+            $data['emergency_contacts'] = [['name'=>'Kontak Darurat Nasional','number'=>'119']];
+        }
+        $school = School::create($data);
+        
         return $this->created(new SchoolResource($school));
     }
 
@@ -48,6 +53,7 @@ class SchoolController extends Controller
      * Get school detail
      */
     #[Group('School')]
+    #[ExcludeRouteFromDocs]
     public function show(School $school)
     {
         Gate::authorize('view', $school);
@@ -56,12 +62,23 @@ class SchoolController extends Controller
     }
 
     /**
-     * Update school detail
+     * Get detail of user's school
      */
     #[Group('School')]
+    public function me(Request $request)
+    {
+
+        return $this->success(new SchoolResource($request->user()->school));
+    }
+    
+    /**
+     * Update school detail
+    */
+    #[Group('School')]
+    #[ExcludeRouteFromDocs]
     public function update(Request $request, School $school)
     {
-        $request->validate([
+        $data = $request->validate([
             'name' => 'required|string|max:255',
             'address' => 'required|string|max:255',
             'phone' => 'required|digits_between:8,13|unique:schools,phone,'.$school->id,
@@ -69,23 +86,25 @@ class SchoolController extends Controller
             'district' => 'required|string|exists:locations,district|max:255',
             'city' => 'required|string|exists:locations,city|max:255',
             'province' => 'required|string|exists:locations,province|max:255',
+            'emergency_contacts' => 'nullable|array'
         ]);
-        $school->update($request->all());
-
+        $school->update($data);
+        
         return $this->created(new SchoolResource($school));
     }
 
     /**
      * Delete school
-     *
-     * It will delete all rooms and users related to the school
-     */
+    *
+    * It will delete all rooms and users related to the school
+    */
     #[Group('School')]
+    #[ExcludeRouteFromDocs]
     public function destroy(School $school)
     {
         $data = $school->toArray();
         $school->delete();
-
+        
         return $this->delete($data);
     }
 }

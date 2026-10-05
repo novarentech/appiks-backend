@@ -69,4 +69,11 @@ class School extends Model
     {
         return $this->hasMany(Quote::class);
     }
+
+    protected function casts(): array
+    {
+        return [
+            'emergency_contacts' => 'array',
+        ];
+    }
 }

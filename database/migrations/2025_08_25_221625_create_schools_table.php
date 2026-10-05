@@ -21,6 +21,7 @@ return new class extends Migration
             $table->string('district');
             $table->string('city');
             $table->string('province');
+            $table->json('emergency_contacts');
             $table->timestamps();
         });
         Schema::create('rooms', function (Blueprint $table) {

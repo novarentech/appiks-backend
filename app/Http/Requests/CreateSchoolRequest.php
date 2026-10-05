@@ -31,6 +31,7 @@ class CreateSchoolRequest extends FormRequest
             'district' => 'required|string|exists:locations,district|max:255',
             'city' => 'required|string|exists:locations,city|max:255',
             'province' => 'required|string|exists:locations,province|max:255',
+            'emergency_contacts' => 'nullable|array'
         ];
     }
 }
