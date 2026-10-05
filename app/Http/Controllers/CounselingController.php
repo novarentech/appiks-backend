@@ -58,6 +58,9 @@ class CounselingController extends Controller
         $payload = $request->except('date', 'time');
         // return $this->success($payload);
         $counseling = Counseling::create($payload);
+        $counseling->sharing->update([
+            'status'=>ReportStatus::MENUNGGU_PERSETUJUAN->value 
+        ]);
         return $this->success(new CounselingResource($counseling));
     }
 
