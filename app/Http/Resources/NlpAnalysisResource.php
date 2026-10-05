@@ -36,6 +36,10 @@ class NlpAnalysisResource extends JsonResource
                             'stem' => $keyword['stem'] ?? null,
                             'zone' => $keyword['zone'] ?? null,
                             'weight' => $keyword['weight'] ?? null,
+                            'type' => $keyword['type'] ?? null,
+                            'reason' => $keyword['reason'] ?? null,
+                            'category' => $keyword['category'] ?? null,
+                            'position' => $keyword['position'] ?? null,
                         ]
                     )
                     ->values()
