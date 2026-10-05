@@ -33,13 +33,25 @@ class ProcessNlpAnalysisJob implements ShouldQueue
     {
         $response = $callNlpAction->handle($this->nlpAnalysis->text);
 
+        switch ($response['zone_status']) {
+            case 'Red Zone':
+                $cutdown = 2;
+                break;
+            case 'Yellow Zone':
+                $cutdown = 72;
+                break;
+            case 'No Trigger':
+                $cutdown = 0;
+                break;
+        }
+
         $this->nlpAnalysis->update([
             'response' => $response,
             'flag' => $response['zone_status'] ?? null,
         ]);
 
         $this->nlpAnalysis->nlpable()?->update([
-            'cutdown_for_report' => now()->addHours(48),
+            'cutdown_for_report' => now()->addHours($cutdown),
             'priority' => $this->zoneMapping[$response['zone_status']],
         ]);
 

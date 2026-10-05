@@ -15,7 +15,7 @@ return new class extends Migration
         Schema::create('sharings', function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(User::class)->constrained()->onDelete('cascade');
-            $table->string('title');
+            $table->string('title')->nullable();
             $table->text('description');
             $table->text('reply')->nullable();
             $table->date('replied_at')->nullable();

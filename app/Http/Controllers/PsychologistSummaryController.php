@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Enums\BookingStatus;
 use App\Enums\MoodStatus;
 use App\Actions\BuildMoodRecapAction;
+use App\Enums\CounselingStatus;
+use App\Enums\ReportStatus;
 use App\Http\Requests\StoreClinicalSummaryFeedbackRequest;
 use App\Http\Resources\CounselingResource;
 use App\Http\Resources\MoodRecordResource;
@@ -87,9 +89,9 @@ class PsychologistSummaryController extends Controller
 
         // Fetch AI Clinical Summary
         $summary = ClinicalSummary::where('counseling_id', $counseling->id)->first();
-        if (!$summary) {
-            return $this->error('Ringkasan AI belum tersedia atau gagal dibuat.', 404);
-        }
+        // if (!$summary) {
+        //     return $this->error('Ringkasan AI belum tersedia atau gagal dibuat.', 404);
+        // }
 
         // Load related relationships
         $counseling->load(['sharing.nlp', 'student.room', 'student.counselor', 'counselor']);
@@ -126,18 +128,24 @@ class PsychologistSummaryController extends Controller
                 ] : null,
             ];
         }
+        if($summary){
 
+            return $this->success([
+                'student'              => $studentIdentity,
+                'sharing'              => $sharingData,
+                'generated_at'         => $summary->updated_at,
+                'llm_provider'         => 'gemini-3.1-flash-lite',
+                'summary_text'         => $summary->summary_data,
+                'raw_payload'          => $summary->raw_payload ?? null,
+                'clinical_notes'       => $summary->clinical_notes,
+                'rating'               => $summary->rating,
+                'improvement_feedback' => $summary->improvement_feedback,
+            ], 'Ringkasan berhasil diambil.');
+        }
         return $this->success([
             'student'              => $studentIdentity,
             'sharing'              => $sharingData,
-            'generated_at'         => $summary->updated_at,
-            'llm_provider'         => 'gemini-3.1-flash-lite',
-            'summary_text'         => $summary->summary_data,
-            'raw_payload'          => $summary->raw_payload,
-            'clinical_notes'       => $summary->clinical_notes,
-            'rating'               => $summary->rating,
-            'improvement_feedback' => $summary->improvement_feedback,
-        ], 'Ringkasan berhasil diambil.');
+        ], 'Ringkasan belum tersedia atau gagal dibuat.');
     }
 
     /**
@@ -175,6 +183,10 @@ class PsychologistSummaryController extends Controller
             abort(403, 'Akses ditolak. Anda tidak memiliki rujukan aktif untuk sesi ini.');
         }
 
+        $booking->update(['status' => BookingStatus::FINISHED->value]);
+        $counseling->update(['status' => CounselingStatus::SELESAI->value]);
+        $counseling->sharing->update(['status' => ReportStatus::SELESAI->value]);
+        
         $summary = ClinicalSummary::firstOrCreate(
             ['counseling_id' => $counseling->id],
             ['summary_data' => '']

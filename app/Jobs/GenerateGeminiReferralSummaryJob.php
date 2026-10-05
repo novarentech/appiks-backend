@@ -56,21 +56,20 @@ class GenerateGeminiReferralSummaryJob implements ShouldQueue
         // Call Gemini API via Trait
         $generatedText = $this->generateClinicalSummary($promptText, $systemInstruction);
 
-        if ($generatedText) {
             // Server-side truncation fallback (maximum 200 words)
-            $words = explode(' ', $generatedText);
-            if (count($words) > 200) {
-                $generatedText = implode(' ', array_slice($words, 0, 200)) . '...';
-            }
-
-            // Store in ClinicalSummary
-            ClinicalSummary::updateOrCreate(
-                ['counseling_id' => $this->counseling->id],
-                [
-                    'summary_data' => $generatedText,
-                    'raw_payload' => $payload,
-                ]
-            );
+        $words = explode(' ', $generatedText);
+        if (count($words) > 200) {
+            $generatedText = implode(' ', array_slice($words, 0, 200)) . '...';
         }
+
+        // Store in ClinicalSummary
+        ClinicalSummary::updateOrCreate(
+            ['counseling_id' => $this->counseling->id],
+            [
+                'summary_data' => $generatedText ?? null,
+                'raw_payload' => $payload,
+            ]
+        );
+        
     }
 }

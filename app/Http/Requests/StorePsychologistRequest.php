@@ -26,6 +26,21 @@ class StorePsychologistRequest extends FormRequest
             'specialization'   => 'nullable|string|max:255',
             'institution_name' => 'required|string|max:255',
             'phone_number'     => 'nullable|string|digits_between:10,15|unique:users,phone',
+            'password'         => 'required|string|min:6',
+        ];
+    }
+
+    /**
+     * Get custom error messages for validator errors.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'password.required' => 'The password field is required.',
+            'password.min' => 'The password must be at least 6 characters.',
+            'password.confirmed' => 'The password confirmation does not match.',
         ];
     }
 }

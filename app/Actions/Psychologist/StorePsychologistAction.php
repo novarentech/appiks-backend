@@ -22,7 +22,7 @@ class StorePsychologistAction
                 'identifier' => $data['str_number'],     // STR is stored as identifier
                 'phone' => $data['phone_number'] ?? null,
                 'role' => UserRole::PSYCHOLOGIST->value,
-                'password' => Hash::make('password123'),
+                'password' => Hash::make($data['password']),
                 'verified' => true,
             ]);
 

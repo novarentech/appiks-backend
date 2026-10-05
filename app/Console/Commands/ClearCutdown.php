@@ -31,7 +31,7 @@ class ClearCutdown extends Command
     {
         try {
             DB::beginTransaction();
-            Sharing::where('cutdown_for_report', '<', now())->update(['cutdown_for_report' => null, 'priority' => 'rendah']);
+            Sharing::where('cutdown_for_report', '<', now())->update(['cutdown_for_report' => null]);
             Report::where('cutdown_for_report', '<', now())->update(['cutdown_for_report' => null]);
             DB::commit();
             $this->info('Cutdown cleared successfully');

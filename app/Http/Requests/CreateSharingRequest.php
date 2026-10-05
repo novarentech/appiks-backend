@@ -25,7 +25,7 @@ class CreateSharingRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title' => 'string|max:100',
+            'title' => 'string|max:100|nullable',
             'description' => 'string',
         ];
     }

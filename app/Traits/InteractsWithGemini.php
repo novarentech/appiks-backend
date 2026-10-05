@@ -13,8 +13,8 @@ trait InteractsWithGemini
     public function generateClinicalSummary(string $promptText, string $systemInstruction): ?string
     {
         try {
-            if(config('gemini.api_key') == ""){
-                return "===Hasil AI===";
+            if (config('gemini.api_key') == "") {
+                return null;
             }
             $result = Gemini::generativeModel('gemini-3.1-flash-lite')
                 ->generateContent("INSTRUCTION:\n{$systemInstruction}\n\nDATA:\n{$promptText}");

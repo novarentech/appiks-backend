@@ -77,9 +77,8 @@ class ReferralPayloadBuilder
                     $yellowCount++;
                 }
 
-                // 2. Dynamic Masking berdasarkan matched_keywords dari response NLP
-                $matchedKeywords = $nlpResponse['matched_keywords'] ?? [];
-                $maskedText = $this->maskDynamicNlpKeywords($sharing->description ?? '', $matchedKeywords);
+                $maskedText = $sharing->description ?? '';
+                // $maskedText = $this->maskDynamicNlpKeywords($sharing->description ?? '', $matchedKeywords);
 
                 return [
                     'date' => $sharing->created_at ? $sharing->created_at->format('Y-m-d') : null,

@@ -24,7 +24,12 @@ class UpdateConsentRequest extends FormRequest
     {
         return [
             'is_granted' => ['required', 'boolean'],
-            'scopes' => ['nullable', 'array'],
+            'scopes' => [
+                Rule::requiredIf(fn () => $this->boolean('is_granted')),
+                'nullable',
+                'array',
+                Rule::when($this->boolean('is_granted'), ['min:1']),
+            ],
             'scopes.*' => [
                 'string',
                 Rule::in([
@@ -33,6 +38,19 @@ class UpdateConsentRequest extends FormRequest
                     'assesment_logs',
                 ]),
             ],
+        ];
+    }
+
+    /**
+     * Get custom error messages for validator errors.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'scopes.required' => 'At least one scope must be selected when granting consent.',
+            'scopes.min' => 'At least one scope must be selected when granting consent.',
         ];
     }
 }
