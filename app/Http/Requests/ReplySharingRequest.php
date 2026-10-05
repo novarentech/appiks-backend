@@ -36,7 +36,7 @@ class ReplySharingRequest extends FormRequest
                 'reply' => $this->text,
                 'replied_at' => now()->toDateString(),
                 'replied_by' => auth()->user()->name,
-                'status'=> ReportStatus::SELESAI->value
+                'status'=> ReportStatus::DITANGGAPI->value
             ]
         ));
     }

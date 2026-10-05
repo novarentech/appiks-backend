@@ -6,6 +6,7 @@ enum ReportStatus: string
 {
     case MENUNGGU_TINJAUAN     = 'Belum Ditinjau';
     case DITINJAU              = 'Sedang Ditangani';
+    case DITANGGAPI    = 'Sudah Ditanggapi';
     case MENUNGGU_TANGGAPAN    = 'Belum Ditanggapi';
     case MENUNGGU_PERSETUJUAN = 'Menunggu Persetujuan Siswa';
     case DIJADWALKAN           = 'Konseling Dijadwalkan';
