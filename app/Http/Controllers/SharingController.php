@@ -157,7 +157,7 @@ class SharingController extends Controller
             ProcessNlpAnalysisJob::dispatch($nlpAnalysis);
         }
 
-        return $this->created(new SharingResource($sharing->load(['nlp', 'counseling'])));
+        return $this->created(['contacts'=>array_merge([["name"=>$sharing->user->counselor->name,"phone"=>$sharing->user->counselor->phone]],$sharing->user->school->emergency_contacts),'sharing'=>new SharingResource($sharing->load(['nlp', 'counseling']))]);
     }
 
     /**
