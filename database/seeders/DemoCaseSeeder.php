@@ -23,7 +23,8 @@ class DemoCaseSeeder extends Seeder
         $password = Hash::make('password');
         $this->call([
             LocationSeeder::class,
-            SchoolSeeder::class
+            SchoolSeeder::class,
+            RoomSeeder::class
         ]);
 User::factory()->create([
             'username' => 'super',
@@ -81,6 +82,7 @@ User::factory()->create([
                     'role' => UserRole::STUDENT->value,
                     'counselor_id' => $counselor->id,
                     'school_id' => 1,
+                    'room_id' => $i % 2 == 0 ? 1 : 2,
                 ]);
 
                 $sharingKuning = Sharing::create([

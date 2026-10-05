@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Enums\CounselingResolution;
 use App\Enums\NlpAnalysisStatus;
+use App\Enums\Priority;
 use App\Enums\ReportStatus;
 use App\Enums\UserRole;
 use App\Http\Requests\CreateSharingRequest;
+use App\Http\Requests\GetSharingRequest;
 use App\Http\Requests\ReplySharingRequest;
 use App\Http\Resources\SharingResource;
 use App\Jobs\ProcessNlpAnalysisJob;
@@ -16,9 +18,11 @@ use App\Traits\ApiResponder;
 use Carbon\Carbon;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Dedoc\Scramble\Attributes\ExcludeAllRoutesFromDocs;
 use Dedoc\Scramble\Attributes\ExcludeRouteFromDocs;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class SharingController extends Controller
@@ -31,16 +35,79 @@ class SharingController extends Controller
      * Mendapatkan semua data curhatan milik siswa tersebut atau siswa yang dibawahi oleh BK tersebut. Hanya bisa diakses oleh BK dan siswa
      */
     #[Group('Sharing')]
-    public function index()
+    public function index(GetSharingRequest $request): JsonResponse
     {
         $user = Auth::user();
         if ($user->role == UserRole::STUDENT->value) {
-            $sharings = $user->sharing()->with(['user', 'nlp', 'counseling'])->orderBy('replied_at')->get();
+            $query = $user->sharing()->with(['user.room', 'nlp', 'counseling'])->orderBy('replied_at');
         } elseif ($user->role == UserRole::COUNSELOR->value) {
-            $sharings = Sharing::with(['user', 'user.room', 'nlp'])->whereIn('user_id', $user->counselored->pluck('id'))->get();
+            $query = Sharing::with(['user.room', 'nlp', 'counseling'])->whereIn('user_id', $user->counselored->pluck('id'));
         } else {
-            $sharings = collect();
+            return $this->success(SharingResource::collection(collect()));
         }
+
+        // Filter: user.room (room.level + room.name, e.g. "XII IPA 4")
+        $room = $request->input('room', $request->input('room_name'));
+        if (!empty($room)) {
+            $room = trim($room);
+            $concatExpr = match (DB::connection()->getDriverName()) {
+                'sqlite' => "level || ' ' || name",
+                default => "CONCAT(level, ' ', name)",
+            };
+
+            $query->whereHas('user.room', function ($q) use ($room, $concatExpr) {
+                $q->where(function ($sq) use ($room, $concatExpr) {
+                    $sq->whereRaw("{$concatExpr} LIKE ?", ["%{$room}%"])
+                       ->orWhere('name', 'like', "%{$room}%");
+                });
+            });
+        }
+
+        // Filter: status
+        if ($request->filled('status')) {
+            $status = strtolower(trim($request->input('status')));
+            $enumCase = match ($status) {
+                'belum ditinjau', 'belum_ditinjau', 'menunggu tinjauan', 'menunggu_tinjauan', 'pending' => ReportStatus::MENUNGGU_TINJAUAN,
+                'sedang ditangani', 'sedang_ditangani', 'ditinjau' => ReportStatus::DITINJAU,
+                'belum ditanggapi', 'belum_ditanggapi', 'menunggu tanggapan', 'menunggu_tanggapan' => ReportStatus::MENUNGGU_TANGGAPAN,
+                'menunggu persetujuan siswa', 'menunggu_persetujuan_siswa', 'menunggu persetujuan', 'menunggu_persetujuan' => ReportStatus::MENUNGGU_PERSETUJUAN,
+                'konseling dijadwalkan', 'konseling_dijadwalkan', 'dijadwalkan' => ReportStatus::DIJADWALKAN,
+                'diselesaikan', 'selesai' => ReportStatus::SELESAI,
+                'dibatalkan' => ReportStatus::DIBATALKAN,
+                'jadwal ditolak siswa', 'jadwal_ditolak_siswa', 'ditolak' => ReportStatus::DITOLAK,
+                'bukan urgent', 'bukan_urgent' => ReportStatus::BUKAN_URGENT,
+                default => ReportStatus::tryFrom($request->input('status')),
+            };
+
+            if ($enumCase) {
+                $query->where('status', $enumCase->value);
+            } else {
+                $query->where('status', $request->input('status'));
+            }
+        }
+
+        // Filter: priority
+        if ($request->filled('priority')) {
+            $priority = strtolower(trim($request->input('priority')));
+            if ($priority === 'kritis' || $priority === Priority::TINGGI->value) {
+                $query->where('priority', Priority::TINGGI->value);
+            } elseif ($priority === Priority::SEDANG->value) {
+                $query->where('priority', Priority::SEDANG->value);
+            } elseif ($priority === Priority::RENDAH->value) {
+                $query->where('priority', Priority::RENDAH->value);
+            } elseif ($priority === 'prioritas') {
+                $query->whereIn('priority', [Priority::RENDAH->value, Priority::SEDANG->value]);
+            } else {
+                $priorityEnum = Priority::tryFrom($priority);
+                if ($priorityEnum) {
+                    $query->where('priority', $priorityEnum->value);
+                } else {
+                    $query->where('priority', $priority);
+                }
+            }
+        }
+
+        $sharings = $query->get();
 
         return $this->success(SharingResource::collection($sharings));
     }

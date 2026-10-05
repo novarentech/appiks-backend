@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ReportStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
@@ -19,6 +20,7 @@ class Sharing extends Model
     {
         return [
             'acknowledged_at' => 'datetime',
+            'status' => ReportStatus::class,
         ];
     }
 

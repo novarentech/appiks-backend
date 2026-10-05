@@ -16,7 +16,6 @@ use Illuminate\Support\Facades\Gate;
 use Dedoc\Scramble\Attributes\ExcludeAllRoutesFromDocs;
 use Dedoc\Scramble\Attributes\ExcludeRouteFromDocs;
 
-#[ExcludeAllRoutesFromDocs]
 class RoomController extends Controller
 {
     use ApiResponder;
@@ -27,20 +26,22 @@ class RoomController extends Controller
      * Digunakan untuk mendapatkan jumlah kelas didalam sekolah user tersebut. Bisa diakses oleh selain murid
      */
     #[Group('Room')]
+    #[ExcludeRouteFromDocs]
     public function getRoomCount()
     {
         Gate::authorize('dashboard-data');
         $count = Room::where('school_id', Auth::user()->school_id)->count();
-
+        
         return $this->success(['count' => (int) $count]);
     }
-
+    
     /**
      * Get room and student count
-     *
-     * Digunakan untuk mendapatkan jumlah kelas dan siswa didalam sekolah user tersebut. Bisa diakses oleh selain murid
-     */
+    *
+    * Digunakan untuk mendapatkan jumlah kelas dan siswa didalam sekolah user tersebut. Bisa diakses oleh selain murid
+    */
     #[Group('Room')]
+    #[ExcludeRouteFromDocs]
     public function roomStudentCount()
     {
         Gate::authorize('dashboard-data');
@@ -52,9 +53,9 @@ class RoomController extends Controller
 
     /**
      * Get all rooms data
-     *
-     * Digunakan untuk mendapatkan jumlah kelas didalam sekolah user tersebut. Bisa diakses oleh selain murid
-     */
+    *
+    * Digunakan untuk mendapatkan jumlah kelas didalam sekolah user tersebut. Bisa diakses oleh selain murid
+    */
     #[Group('Room')]
     public function index()
     {
@@ -72,22 +73,24 @@ class RoomController extends Controller
      * Get all level on school
      */
     #[Group('Room')]
+    #[ExcludeRouteFromDocs]
     public function getLevel()
     {
         Gate::authorize('dashboard-data');
         $levels = Room::where('school_id', Auth::user()->school_id)->select('level')
             ->distinct()
             ->pluck('level');
-
+            
         return $this->success($levels);
     }
-
+    
     /**
      * Get room by level on school
-     *
-     * @param  string  $level  X | XI | XII
+    *
+    * @param  string  $level  X | XI | XII
      */
     #[Group('Room')]
+    #[ExcludeRouteFromDocs]
     public function byLevel(string $level)
     {
         Gate::authorize('dashboard-data');
@@ -95,13 +98,14 @@ class RoomController extends Controller
 
         return $this->success($rooms);
     }
-
+    
     /**
      * Get all rooms of the school
-     *
-     * Digunakan untuk mendapatkan kelas dari suatu sekolah. Hanya bisa diakses oleh Super Admin
-     */
+    *
+    * Digunakan untuk mendapatkan kelas dari suatu sekolah. Hanya bisa diakses oleh Super Admin
+    */
     #[Group('Room')]
+    #[ExcludeRouteFromDocs]
     public function roomOfSchool(Request $request, School $school)
     {
         Gate::allowIf(function (User $user) {
@@ -111,40 +115,43 @@ class RoomController extends Controller
 
         return $this->success(RoomResource::collection($rooms));
     }
-
+    
     /**
      * Get room detail
-     *
-     * Digunakan untuk mendapatkan detail kelas
-     */
+    *
+    * Digunakan untuk mendapatkan detail kelas
+    */
     #[Group('Room')]
+    #[ExcludeRouteFromDocs]
     public function show(string $code)
     {
         Gate::authorize('dashboard-data');
         $room = Room::whereCode($code)->with(['students', 'students.mentor', 'school'])->withCount('students')->first();
-
+        
         return $this->success(new RoomResource($room));
     }
-
+    
     /**
      * Create room
-     *
-     * Digunakan membuat kelas baru. Hanya bisa dilakukan oleh Admin TU
-     */
+    *
+    * Digunakan membuat kelas baru. Hanya bisa dilakukan oleh Admin TU
+    */
     #[Group('Room')]
+    #[ExcludeRouteFromDocs]
     public function store(CreateRoomRequest $request)
     {
         $room = Room::create($request->all());
 
         return $this->success(new RoomResource($room));
     }
-
+    
     /**
      * Delete room
-     *
-     * Digunakan menghapus kelas. Hanya bisa dilakukan oleh Admin TU
-     */
+    *
+    * Digunakan menghapus kelas. Hanya bisa dilakukan oleh Admin TU
+    */
     #[Group('Room')]
+    #[ExcludeRouteFromDocs]
     public function destroy(Request $request, Room $room)
     {
         Gate::allowIf(function (User $user) use ($room) {
@@ -152,16 +159,17 @@ class RoomController extends Controller
         });
         $data = $room->toArray();
         $room->delete();
-
+        
         return $this->success($data);
     }
-
+    
     /**
      * Update room
-     *
-     * Digunakan mengubah data kelas. Hanya bisa dilakukan oleh Admin TU
-     */
+    *
+    * Digunakan mengubah data kelas. Hanya bisa dilakukan oleh Admin TU
+    */
     #[Group('Room')]
+    #[ExcludeRouteFromDocs]
     public function update(Request $request, Room $room)
     {
         Gate::allowIf(function (User $user) use ($room) {
@@ -172,7 +180,7 @@ class RoomController extends Controller
             'level' => 'required|string|in:X,XI,XII',
         ]);
         $room->update($request->all());
-
+        
         return $this->success(new RoomResource($room));
     }
 }
