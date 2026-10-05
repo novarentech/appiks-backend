@@ -202,6 +202,22 @@ class SharingController extends Controller
     }
 
     /**
+     * Ack the sharing
+     *
+     * Mengubah status curhat jadi ditangani
+     */
+    #[Group('Sharing')]
+    public function ack(Sharing $sharing)
+    {
+        $sharing->update([
+            'status' => ReportStatus::DITINJAU->value,
+            'acknowledged_at' => now(),
+        ]);
+
+        return $this->success(new SharingResource($sharing->load(['nlp', 'counseling'])));
+    }
+
+    /**
      * Acknowledge the sharing
      *
      * Meninjau curhatan siswa dan hanya bisa dilakukan oleh Guru BK siswa tersebut
