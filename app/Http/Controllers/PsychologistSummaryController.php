@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\BookingStatus;
+use App\Enums\ConsentStatus;
 use App\Enums\MoodStatus;
 use App\Actions\BuildMoodRecapAction;
 use App\Enums\CounselingStatus;
@@ -226,10 +227,12 @@ class PsychologistSummaryController extends Controller
      * }
      */
     #[Group('Mood Record')]
-    public function getSharingMonthlyRecap(
+    public function getMoodMonthlyRecap(
         Counseling $counseling,
         BuildMoodRecapAction $recapAction
     ): JsonResponse {
+        $this->authorizeConsentScope($counseling, 'mood_history', 'Akses ditolak. Siswa tidak memberikan izin akses riwayat mood.');
+
         $counseling->load('student.room');
         $student = $counseling->student;
         $endDate = Carbon::today();
@@ -298,6 +301,8 @@ class PsychologistSummaryController extends Controller
             abort(403, 'Akses ditolak. Anda tidak memiliki rujukan aktif untuk sesi ini.');
         }
 
+        $this->authorizeConsentScope($counseling, 'sharing_history', 'Akses ditolak. Siswa tidak memberikan izin akses riwayat curhat.');
+
         $counseling->load('student.room');
         $student = $counseling->student;
         $endDate = Carbon::today();
@@ -348,6 +353,8 @@ class PsychologistSummaryController extends Controller
             abort(403, 'Akses ditolak. Anda tidak memiliki rujukan aktif untuk sesi ini.');
         }
 
+        $this->authorizeConsentScope($counseling, 'assesment_logs', 'Akses ditolak. Siswa tidak memberikan izin akses catatan konseling BK.');
+
         $latestCounseling = Counseling::where('student_id', $counseling->student_id)
             ->whereNotNull('counselor_id')
             ->with(['student.room', 'counselor', 'sharing', 'psychologist'])
@@ -362,5 +369,19 @@ class PsychologistSummaryController extends Controller
             new CounselingResource($latestCounseling),
             'Latest counseling retrieved.'
         );
+    }
+
+    /**
+     * Authorize that the counseling has a granted consent including the required scope.
+     */
+    private function authorizeConsentScope(Counseling $counseling, string $scope, string $message): void
+    {
+        $consent = $counseling->latestConsent;
+        $isGranted = $consent && ($consent->status === ConsentStatus::GRANTED || $consent->status === ConsentStatus::GRANTED->value);
+        $scopes = is_array($consent?->scopes) ? $consent->scopes : [];
+
+        if (!$consent || !$isGranted || !in_array($scope, $scopes, true)) {
+            abort(403, $message);
+        }
     }
 }
