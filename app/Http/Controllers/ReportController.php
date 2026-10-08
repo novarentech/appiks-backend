@@ -170,21 +170,36 @@ class ReportController extends Controller
      * }
      */
     #[Group('Dashboard')]
-    #[ExcludeRouteFromDocs]
+    // #[ExcludeRouteFromDocs]
     public function getReportGraph()
     {
         Gate::authorize('viewGraph', Report::class);
-        $report = Report::whereIn('user_id', Auth::user()->counselored->pluck('id'))
-            ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
-            ->groupBy('month')
-            ->orderBy('month')
-            ->pluck('total', 'month');
+        if (Auth::user()->role === UserRole::HEADTEACHER->value) {
+            $report = Report::whereIn('user_id', Auth::user()->school->students->pluck('id'))
+                ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
+                ->groupBy('month')
+                ->orderBy('month')
+                ->pluck('total', 'month');
 
-        $sharing = Sharing::whereIn('user_id', Auth::user()->counselored->pluck('id'))
-            ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
-            ->groupBy('month')
-            ->orderBy('month')
-            ->pluck('total', 'month');
+            $sharing = Sharing::whereIn('user_id', Auth::user()->school->students->pluck('id'))
+                ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
+                ->groupBy('month')
+                ->orderBy('month')
+                ->pluck('total', 'month');
+        }else{
+            $report = Report::whereIn('user_id', Auth::user()->counselored->pluck('id'))
+                ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
+                ->groupBy('month')
+                ->orderBy('month')
+                ->pluck('total', 'month');
+    
+            $sharing = Sharing::whereIn('user_id', Auth::user()->counselored->pluck('id'))
+                ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
+                ->groupBy('month')
+                ->orderBy('month')
+                ->pluck('total', 'month');
+
+        }
 
         return $this->success([
             'report' => (object) $report,

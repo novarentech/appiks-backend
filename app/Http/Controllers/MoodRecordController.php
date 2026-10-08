@@ -24,43 +24,45 @@ use Maatwebsite\Excel\Facades\Excel;
 use Dedoc\Scramble\Attributes\ExcludeAllRoutesFromDocs;
 use Dedoc\Scramble\Attributes\ExcludeRouteFromDocs;
 
-#[ExcludeAllRoutesFromDocs]
 class MoodRecordController extends Controller
 {
     use ApiResponder;
-
+    
     /**
      * Is user can record today's mood
-     *
-     * Mengecek apakah murid bisa melakukan rekam mood hari ini
-     */
+    *
+    * Mengecek apakah murid bisa melakukan rekam mood hari ini
+    */
     #[Group('Mood Record')]
+    #[ExcludeRouteFromDocs]
     public function check()
     {
         $mood = MoodRecord::where('user_id', Auth::id())->where('recorded', Carbon::today())->get();
-
+        
         return $this->success(['can' => $mood->count() == 0]);
     }
-
+    
     /**
      * Get all mood records of student
-     *
-     * Mendapatkan semua data mood seorang siswa
-     */
+    *
+    * Mendapatkan semua data mood seorang siswa
+    */
     #[Group('Mood Record')]
+    #[ExcludeRouteFromDocs]
     public function recordsOfStudent(User $user)
     {
         $mood = $user->mood()->orderBy('recorded', 'desc')->get();
 
         return $this->success(MoodRecordResource::collection($mood));
     }
-
+    
     /**
      * Check user's mood today
-     *
+    *
      * Mengecek status mood siswa hari ini
-     */
+    */
     #[Group('Mood Record')]
+    #[ExcludeRouteFromDocs]
     public function today()
     {
         $mood = MoodRecord::where('user_id', Auth::id())->where('recorded', Carbon::today())->first();
@@ -70,26 +72,27 @@ class MoodRecordController extends Controller
 
         return $this->error("User doesn't have mood record today", 404, null);
     }
-
+    
     /**
      * Check user's streak point
-     *
-     * Menghitung poin streak
-     */
+    *
+    * Menghitung poin streak
+    */
     #[Group('Mood Record')]
+    #[ExcludeRouteFromDocs]
     public function streaks()
     {
         // Ambil semua tanggal mood dalam 1 query, urutkan descending
         $dates = MoodRecord::forUser(Auth::id())
-            ->orderBy('recorded', 'desc')
-            ->pluck('recorded')
-            ->map(fn($d) => Carbon::parse($d)->toDateString())
-            ->unique()
-            ->values();
+        ->orderBy('recorded', 'desc')
+        ->pluck('recorded')
+        ->map(fn($d) => Carbon::parse($d)->toDateString())
+        ->unique()
+        ->values();
 
         $streak = 0;
         $expected = Carbon::today()->toDateString();
-
+        
         foreach ($dates as $date) {
             if ($date === $expected) {
                 $streak++;
@@ -104,52 +107,55 @@ class MoodRecordController extends Controller
 
     /**
      * Get user mood recaps by month
-     *
-     * Mendapatkan rekapitulasi rekaman mood milik murid secara bulanan. Hanya bisa diakses oleh murid
-     *
-     * @param  string  $month  YYYY-MM ex. 2025-09
-     */
+    *
+    * Mendapatkan rekapitulasi rekaman mood milik murid secara bulanan. Hanya bisa diakses oleh murid
+    *
+    * @param  string  $month  YYYY-MM ex. 2025-09
+    */
     #[Group('Mood Record')]
+    #[ExcludeRouteFromDocs]
     public function recapPerMonth(string $month)
     {
         Gate::authorize('recapPerMonth', MoodRecord::class);
         $mood = MoodRecord::where('user_id', Auth::id())->where('recorded', 'like', "$month-__")->orderBy('recorded')->get();
-
+        
         return $this->success(MoodRecordResource::collection($mood));
     }
-
+    
     /**
      * Record mood the authenticated user
      *
      * Merekam mood siswa pada hari ini dan akan mengembalikan status serta quotes
-     */
+    */
     #[Group('Mood Record')]
+    #[ExcludeRouteFromDocs]
     public function store(MoodRecordSendRequest $request, StoreMoodRecordAction $action)
     {
         $result = $action->handle($request->all());
-
+        
         return $this->created($result, 'Success record mood');
     }
-
+    
     /**
      * Get mood trends a year
-     *
-     * Mendapatkan trend mood dalam satu tahun
-     */
+    *
+    * Mendapatkan trend mood dalam satu tahun
+    */
     #[Group('Mood Record')]
+    #[ExcludeRouteFromDocs]
     public function getMoodTrend()
     {
         Gate::authorize('viewSchoolTrend', MoodRecord::class);
-
+        
         $moods = MoodRecord::selectRaw('MONTH(recorded) as month, status, COUNT(*) as total')
-            ->groupBy('month', 'status')
-            ->orderBy('month')
-            ->get();
-
+        ->groupBy('month', 'status')
+        ->orderBy('month')
+        ->get();
+        
         // group per bulan
         $grouped = $moods->groupBy('month');
         $result = [];
-
+        
         foreach ($grouped as $month => $items) {
             $top = $items->sortByDesc('total')->first();
             $result[$this->monthName($month)] = [
@@ -166,7 +172,7 @@ class MoodRecordController extends Controller
         return \Carbon\Carbon::create()->month($month)->format('F'); // ex: "January"
         // atau 'M' kalau mau singkat: "Jan"
     }
-
+    
     /**
      * Get mood count graph
      */
@@ -175,10 +181,10 @@ class MoodRecordController extends Controller
     {
         Gate::authorize('dashboard-data');
         $moods = MoodRecord::whereRecorded(now()->toDateString())
-            ->selectRaw('status, COUNT(*) as total')
-            ->groupBy('status')
-            ->pluck('total', 'status');
-
+        ->selectRaw('status, COUNT(*) as total')
+        ->groupBy('status')
+        ->pluck('total', 'status');
+        
         return $this->success([
             MoodStatus::NEUTRAL->value => (int) ($moods[MoodStatus::NEUTRAL->value] ?? 0),
             MoodStatus::SAD->value => (int) ($moods[MoodStatus::SAD->value] ?? 0),
@@ -215,22 +221,23 @@ class MoodRecordController extends Controller
      * }
      */
     #[Group('Mood Record')]
+    #[ExcludeRouteFromDocs]
     public function moodHistory(
         Request $request,
         User $user,
         string $type,
         BuildMoodRecapAction $recapAction
-    ) {
-        Gate::authorize('viewHistory', [MoodRecord::class, $user]);
-
+        ) {
+            Gate::authorize('viewHistory', [MoodRecord::class, $user]);
+            
         $query = MoodRecord::where('user_id', $user->id);
-
+        
         if ($type === 'monthly') {
             $query->whereMonth('recorded', now()->month)->whereYear('recorded', now()->year);
         } elseif ($type === 'weekly') {
             $query->whereBetween('recorded', [now()->startOfWeek(), now()->endOfWeek()]);
         }
-
+        
         $moods = $query->orderBy('recorded')->get();
         ['recap' => $recap, 'mean' => $mean] = $recapAction->handle($moods);
 
@@ -239,10 +246,10 @@ class MoodRecordController extends Controller
 
     /**
      * Get mood history of the schools
-     *
-     * Mendapatkan rekapitulasi rekam mood siswa dalam satu sekolah. Tersedia opsi bulanan dan mingguan (terakhir). Hanya bisa diakses oleh Super Admin
-     *
-     * @param  string  $type  weekly | monthly
+    *
+    * Mendapatkan rekapitulasi rekam mood siswa dalam satu sekolah. Tersedia opsi bulanan dan mingguan (terakhir). Hanya bisa diakses oleh Super Admin
+    *
+    * @param  string  $type  weekly | monthly
      *
      * @response array{
      *   data: array{
@@ -259,27 +266,28 @@ class MoodRecordController extends Controller
      * }
      */
     #[Group('Mood Record')]
+    #[ExcludeRouteFromDocs]
     public function getMoodTrendSchool(Request $request, School $school, string $type)
     {
         Gate::authorize('viewSchoolTrend', MoodRecord::class);
         $query = MoodRecord::whereIn('user_id', $school->students->pluck('id')->toArray());
-
+        
         if ($type === 'monthly') {
             $query->whereMonth('recorded', now()->month)
                 ->whereYear('recorded', now()->year);
-        } elseif ($type === 'weekly') {
-            $query->whereBetween('recorded', [
-                now()->startOfWeek(),
-                now()->endOfWeek(),
-            ]);
-        }
-
+            } elseif ($type === 'weekly') {
+                $query->whereBetween('recorded', [
+                    now()->startOfWeek(),
+                    now()->endOfWeek(),
+                ]);
+            }
+            
         $moods = $query->orderBy('recorded')->get()
             ->groupBy('recorded')
             ->map(function ($items) {
                 return $items->groupBy('status')
-                    ->map->count()
-                    ->sortDesc()
+                ->map->count()
+                ->sortDesc()
                     ->map(function ($count, $status) use ($items) {
                         return [
                             'recorded' => $items->first()->recorded,
@@ -288,28 +296,29 @@ class MoodRecordController extends Controller
                         ];
                     })
                     ->first(); // ambil status dengan jumlah terbanyak
-            })
-            ->values();
+                })
+                ->values();
 
         return $this->success(compact('moods', 'school'));
     }
-
+    
     /**
      * Export user mood today
-     *
-     * Mendapatkan laporan excel mood siswa hari ini. bisa diakses oleh wali dan BK
-     */
+    *
+    * Mendapatkan laporan excel mood siswa hari ini. bisa diakses oleh wali dan BK
+    */
     #[Group('Export')]
+    #[ExcludeRouteFromDocs]
     public function exportToday()
     {
         Gate::authorize('export', MoodRecord::class);
-
+        
         if (Auth::user()->role == UserRole::TEACHER->value) {
             $student = User::whereRole(UserRole::STUDENT->value)->whereMentorId(Auth::id());
         } else {
             $student = User::whereRole(UserRole::STUDENT->value)->whereCounselorId(Auth::id());
         }
-
+        
         $moods = MoodRecord::with(['user', 'user.room'])->whereIn('user_id', $student->pluck('id'))->where('recorded', Carbon::today())->get()->map(function ($mood) {
             return [
                 'name' => $mood->user->name,
@@ -323,28 +332,29 @@ class MoodRecordController extends Controller
         $fileName = 'exports/moods-'.now()->format('Ymd_His').'.xlsx';
         Excel::store(new AllMoodExport($moods), $fileName, 'public');
         $url = Storage::disk('public')->url($fileName);
-
+        
         return $this->success(compact('url'));
     }
-
+    
     /**
      * Export user mood weekly
-     *
-     * Mendapatkan laporan excel mood siswa minggu ini. bisa diakses oleh wali dan BK
-     */
+    *
+    * Mendapatkan laporan excel mood siswa minggu ini. bisa diakses oleh wali dan BK
+    */
     #[Group('Export')]
+    #[ExcludeRouteFromDocs]
     public function exportWeekly(string $username, BuildMoodRecapAction $recapAction)
     {
         Gate::authorize('export', MoodRecord::class);
-
+        
         $user = User::with(['room', 'counselor', 'mentor'])->whereUsername($username)->first();
         $moods = MoodRecord::where('user_id', $user->id)
-            ->whereBetween('recorded', [now()->startOfWeek(), now()->endOfWeek()])
-            ->orderBy('recorded')
-            ->get();
-
+        ->whereBetween('recorded', [now()->startOfWeek(), now()->endOfWeek()])
+        ->orderBy('recorded')
+        ->get();
+        
         ['recap' => $recap, 'mean' => $mean] = $recapAction->handle($moods);
-
+        
         $stud = [
             'name' => $user->name,
             'room' => 'Kelas '.$user->room->level.' '.$user->room->name,
@@ -352,7 +362,7 @@ class MoodRecordController extends Controller
             'mentor' => $user->mentor->name,
             'identifier' => $user->identifier,
         ];
-
+        
         $data = compact('recap', 'mean', 'moods', 'stud');
         $fileName = 'exports/student-mood-'.now()->format('Ymd_His').'.xlsx';
         Excel::store(new StudentMoodExport($data), $fileName, 'public');
@@ -366,19 +376,20 @@ class MoodRecordController extends Controller
      * Mendapatkan laporan excel mood siswa bulan ini. bisa diakses oleh wali dan BK
      */
     #[Group('Export')]
+    #[ExcludeRouteFromDocs]
     public function exportMonthly(string $username, BuildMoodRecapAction $recapAction)
     {
         Gate::authorize('export', MoodRecord::class);
-
+        
         $user = User::with(['room', 'counselor', 'mentor'])->whereUsername($username)->first();
         $moods = MoodRecord::where('user_id', $user->id)
-            ->whereMonth('recorded', now()->month)
-            ->whereYear('recorded', now()->year)
-            ->orderBy('recorded')
+        ->whereMonth('recorded', now()->month)
+        ->whereYear('recorded', now()->year)
+        ->orderBy('recorded')
             ->get();
 
-        ['recap' => $recap, 'mean' => $mean] = $recapAction->handle($moods);
-
+            ['recap' => $recap, 'mean' => $mean] = $recapAction->handle($moods);
+            
         $stud = [
             'name' => $user->name,
             'room' => 'Kelas '.$user->room->level.' '.$user->room->name,
@@ -386,7 +397,7 @@ class MoodRecordController extends Controller
             'mentor' => $user->mentor->name,
             'identifier' => $user->identifier,
         ];
-
+        
         $data = compact('recap', 'mean', 'moods', 'stud');
         $fileName = 'exports/student-mood-monthly-'.now()->format('Ymd_His').'.xlsx';
         Excel::store(new StudentMoodExport($data), $fileName, 'public');

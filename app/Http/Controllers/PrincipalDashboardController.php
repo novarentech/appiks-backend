@@ -29,7 +29,7 @@ class PrincipalDashboardController extends Controller
      *   success: true,
      *   message: string,
      *   data: array{
-     *     active_cases: int,
+     *     need_intention: int,
      *     resolved_interventions: int
      *   }
      * }
@@ -41,12 +41,11 @@ class PrincipalDashboardController extends Controller
         $schoolId = auth()->user()->school_id;
 
         $stats = [
-            'active_cases' => Sharing::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
-                ->where('priority', 'tinggi')
-                ->where('status', '!=', ReportStatus::SELESAI->value)
+            'need_intention' => Sharing::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
+                ->where('status', ReportStatus::MENUNGGU_TINJAUAN->value)
                 ->count(),
             'resolved_interventions' => Sharing::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
-                ->where('status', ReportStatus::SELESAI->value)
+                ->where('status', ReportStatus::DITINJAU->value)
                 ->count(),
         ];
 

@@ -39,7 +39,8 @@ class ReportPolicy
     public function viewGraph(User $authUser): bool
     {
         return $authUser->role === UserRole::COUNSELOR->value
-            || $authUser->role === UserRole::SUPER->value;
+            || $authUser->role === UserRole::SUPER->value
+            || $authUser->role === UserRole::HEADTEACHER->value;
     }
 
     /**

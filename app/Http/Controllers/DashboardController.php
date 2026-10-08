@@ -22,16 +22,15 @@ use Illuminate\Support\Facades\Gate;
 use Dedoc\Scramble\Attributes\ExcludeAllRoutesFromDocs;
 use Dedoc\Scramble\Attributes\ExcludeRouteFromDocs;
 
-#[ExcludeAllRoutesFromDocs]
 class DashboardController extends Controller
 {
     use ApiResponder;
-
+    
     /**
      * Dashboard headteacher datas
-     *
-     * Mendapatkan data hitungan yang diperlukan di dashboard guru kepala sekolah
-     */
+    *
+    * Mendapatkan data hitungan yang diperlukan di dashboard guru kepala sekolah
+    */
     #[Group('Dashboard')]
     public function headteacher()
     {
@@ -39,7 +38,7 @@ class DashboardController extends Controller
             return $user->role == UserRole::HEADTEACHER->value;
         });
         $school = Auth::user()->school;
-
+        
         // Hitung user per role langsung di database
         $student_count = $school->users()->whereRole(UserRole::STUDENT->value)->count();
         $teacher_count = $school->users()->whereRole(UserRole::TEACHER->value)->count();
@@ -47,7 +46,7 @@ class DashboardController extends Controller
 
         // Hitung jumlah room langsung di query
         $room_count = $school->rooms()->count();
-
+        
         return $this->success([
             'student_count' => $student_count,
             'teacher_count' => $teacher_count,
@@ -58,21 +57,22 @@ class DashboardController extends Controller
 
     /**
      * Dashboard admin for contents
-     *
-     * Mendapatkan data statistik hitungan jumlah konten
+    *
+    * Mendapatkan data statistik hitungan jumlah konten
      */
     #[Group('Content')]
+    #[ExcludeRouteFromDocs]
     public function contentStatistics()
     {
         Gate::allowIf(function (User $user) {
             return $user->role == UserRole::ADMIN->value;
         });
         $school = Auth::user()
-            ->school()
+        ->school()
             ->withCount(['videos', 'articles', 'quotes'])
             ->first();
-
-        $video_count = $school->videos_count;
+            
+            $video_count = $school->videos_count;
         $article_count = $school->articles_count;
         $quote_count = $school->quotes_count;
 
@@ -85,10 +85,11 @@ class DashboardController extends Controller
 
     /**
      * Dashboard teacher datas
-     *
-     * Mendapatkan data hitungan yang diperlukan di dashboard guru wali
-     */
+    *
+    * Mendapatkan data hitungan yang diperlukan di dashboard guru wali
+    */
     #[Group('Dashboard')]
+    #[ExcludeRouteFromDocs]
     public function teacher()
     {
         Gate::allowIf(function (User $user) {
@@ -97,11 +98,11 @@ class DashboardController extends Controller
         $student = User::whereRole(UserRole::STUDENT->value)->whereMentorId(Auth::id());
         $student_count = $student->count();
         $moods = MoodRecord::whereIn('user_id', User::where('mentor_id', Auth::id())->pluck('id'))->where('recorded', Carbon::today());
-
+        
         $mood_today_count = $moods->count();
         $mood_secure_count = $moods->whereIn('status', MoodStatus::secureValues())->count();
         $mood_insecure_count = $moods->whereIn('status', MoodStatus::insecureValues())->count();
-
+        
         return $this->success([
             'student_count' => (int) $student_count,
             'mood_today_count' => (int) $mood_today_count,
@@ -109,13 +110,14 @@ class DashboardController extends Controller
             'mood_insecure_count' => (int) $mood_insecure_count,
         ]);
     }
-
+    
     /**
      * Dashboard counselor datas
-     *
-     * Mendapatkan data hitungan yang diperlukan di dashboard guru BK
+    *
+    * Mendapatkan data hitungan yang diperlukan di dashboard guru BK
      */
     #[Group('Dashboard')]
+    #[ExcludeRouteFromDocs]
     public function counselor()
     {
         Gate::allowIf(function (User $user) {
@@ -123,7 +125,7 @@ class DashboardController extends Controller
         });
         $student = User::whereRole(UserRole::STUDENT->value)->whereCounselorId(Auth::id());
         $student_count = $student->count();
-
+        
         $report_today_count = Report::whereCreatedAt(Carbon::today())->whereIn('user_id', $student->pluck('id')->toArray())->count();
         $meet_today_count = Report::where('date', Carbon::today())->whereIn('user_id', $student->pluck('id')->toArray())->count();
         $sharing_today_count = Sharing::whereCreatedAt(Carbon::today())->whereIn('user_id', $student->pluck('id')->toArray())->count();
@@ -140,8 +142,9 @@ class DashboardController extends Controller
      * Dashboard admin datas
      *
      * Mendapatkan data hitungan yang diperlukan di dashboard Admin TU
-     */
+    */
     #[Group('Dashboard')]
+    #[ExcludeRouteFromDocs]
     public function admin()
     {
         Gate::allowIf(function (User $user) {
@@ -151,15 +154,15 @@ class DashboardController extends Controller
 
         // Total user
         $users_count = $school->users()->count();
-
+        
         // Total video & artikel
         $videos_count = $school->videos()->count();
         $articles_count = $school->articles()->count();
 
         // Total konten hari ini
         $content_today_count = $school->videos()
-            ->whereDate('created_at', now())
-            ->count()
+        ->whereDate('created_at', now())
+        ->count()
             + $school->articles()
                 ->whereDate('created_at', now())
                 ->count();
@@ -177,6 +180,7 @@ class DashboardController extends Controller
      * Mendapatkan data jumlah sekolah, Admin TU.
      */
     #[Group('Dashboard')]
+    #[ExcludeRouteFromDocs]
     public function super()
     {
         Gate::allowIf(function (User $user) {
@@ -193,10 +197,11 @@ class DashboardController extends Controller
 
     /**
      * Get all content with quotes
-     *
-     * Mendapatkan semua data videe, artikel, dan quotes di sekolah tersebut
-     */
+    *
+    * Mendapatkan semua data videe, artikel, dan quotes di sekolah tersebut
+    */
     #[Group('Content')]
+    #[ExcludeRouteFromDocs]
     public function content(\App\Actions\GetMixedContentAction $action)
     {
         return $this->success($action->handle(Auth::user()->school_id));
