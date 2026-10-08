@@ -78,7 +78,6 @@ class PsychologistSummaryController extends Controller
 
         // Authorize: Ensure the psychologist owns a confirmed booking for this counseling referral
         $booking = BookingSchedule::where('counseling_id', $counseling->id)
-            ->where('status', BookingStatus::CONFIRMED->value)
             ->whereHas('slot', function ($q) use ($profile) {
                 $q->where('psychologist_id', $profile->id);
             })->first();
@@ -174,7 +173,6 @@ class PsychologistSummaryController extends Controller
 
         // Authorize: Ensure the psychologist owns a confirmed booking for this counseling referral
         $booking = BookingSchedule::where('counseling_id', $counseling->id)
-            ->where('status', BookingStatus::CONFIRMED->value)
             ->whereHas('slot', function ($q) use ($profile) {
                 $q->where('psychologist_id', $profile->id);
             })->first();

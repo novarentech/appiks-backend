@@ -17,7 +17,7 @@ class DecideReferralAction
     ) {}
     public function handle(BookingSchedule $booking, array $data): BookingSchedule
     {
-        if ($booking->status !== BookingStatus::PENDING) {
+        if ($data['action'] == 'confirm' && $booking->status !== BookingStatus::PENDING) {
             throw new UnprocessableEntityHttpException('Booking ini tidak lagi berstatus pending.');
         }
 
