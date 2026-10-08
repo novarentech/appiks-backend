@@ -253,7 +253,7 @@ class SharingController extends Controller
         $request->validate(['reason' => ['string', 'max:255', 'required']]);
         $sharing->update([
             'priority' => 'rendah',
-            'status' => ReportStatus::BUKAN_URGENT->value,
+            'status' => ReportStatus::BUKAN_URGENT,
             'cutdown_for_report' => null
         ]);
         $sharing->nlp()->update([

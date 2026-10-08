@@ -16,7 +16,7 @@ class SharingPolicy
 
     public function falsePositive(User $user, Sharing $sharing): bool
     {
-        return $sharing->user->counselor_id == $user->id && $sharing->status == ReportStatus::MENUNGGU_TINJAUAN->value;
+        return $sharing->user->counselor_id == $user->id && $sharing->status == ReportStatus::MENUNGGU_TINJAUAN;
     }
 
     public function create(User $user): bool
