@@ -56,7 +56,7 @@ Note the asymmetry in `destroy`: a superadmin can delete **only** admins, while 
 
 Eleven policy classes in [`app/Policies/`](../../app/Policies/). Three are registered explicitly in `AppServiceProvider` (`PsychologistPolicy`, `PsychologistSlotPolicy`, `BookingSchedulePolicy`); the rest resolve by Laravel's naming convention.
 
-**Many abilities have non-standard names** — `recapPerMonth`, `viewSchoolTrend`, `viewHistory`, `export`, `viewGraph`, `viewStudentReports`, `viewLatest`, `scheduleMeeting`, `storeLog`, `viewStudent`, `acknowledge`, `manageSchedule`, `falsePositive`, `manage`, `decide`. These are invoked explicitly via `Gate::authorize('name', ...)` and will **not** be picked up by `authorizeResource()` or implicit resource authorization.
+**Many abilities have non-standard names** — `recapPerMonth`, `viewSchoolTrend`, `viewHistory`, `export`, `viewGraph`, `viewStudentReports`, `viewLatest`, `scheduleMeeting`, `storeLog`, `viewStudent`, `acknowledge`, `manageSchedule`, `viewTimeline`, `falsePositive`, `manage`, `decide`. These are invoked explicitly via `Gate::authorize('name', ...)` and will **not** be picked up by `authorizeResource()` or implicit resource authorization.
 
 #### Policy inventory
 
@@ -72,6 +72,7 @@ Eleven policy classes in [`app/Policies/`](../../app/Policies/). Three are regis
 | | `viewStudent` | caller is the counseling's `student_id`, `psychologist_id`, **or** `counselor_id` |
 | | `acknowledge` | caller **is** the counseling's `student_id` |
 | | `manageSchedule` | caller **is** the counseling's `counselor_id` — cancel and re-propose |
+| | `viewTimeline` | **headteacher of the student's school only.** Other roles exist as commented branches, ready to enable |
 | [`CounselingConsentPolicy`](../../app/Policies/CounselingConsentPolicy.php) | `view`, `update` | caller is the consent's counseling `student_id` — **students only, by construction** |
 | [`SharingPolicy`](../../app/Policies/SharingPolicy.php) | `create` | `role == student` |
 | | `view` | caller owns the sharing **or** is the author's `counselor_id` |
@@ -194,6 +195,7 @@ Legend: ✅ allowed · ⚠️ allowed under a condition (stated) · ❌ denied.
 | Consent-scoped recaps | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ per-scope |
 | **Psychologist account CRUD** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Principal dashboard & incidents** | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Case timeline** (`/timeline`) | ❌ | ❌ | ⚠️ own school | ❌ | ❌ | ❌ | ❌ |
 
 The matrix describes the checks that exist. Where a cell says ✅ with no condition and the endpoint returns a list, assume **no school scoping unless the controller adds it** — see the `dashboard-data` note above.
 

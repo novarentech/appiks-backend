@@ -2,7 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Enums\CaseEventType;
 use App\Enums\NlpAnalysisStatus;
+use App\Models\CaseEvent;
 use App\Models\NlpAnalysis;
 use App\Models\Sharing;
 use Illuminate\Database\Seeder;
@@ -64,7 +66,38 @@ class NlpAnalysisSeeder extends Seeder
             NlpAnalysis::insert($chunk);
         }
 
-        $this->command->info("NlpAnalysisSeeder: {$sharings->count()} NLP analyses seeded.");
+        // Jejak dasar untuk SETIAP curhat, supaya daftar insiden Kepala Sekolah
+        // tidak pernah membuka timeline yang kosong. Tahap lanjutannya diisi
+        // oleh CounselingFlowSeeder dan ReferralFlowSeeder.
+        $events = [];
+
+        foreach ($sharings as $sharing) {
+            $createdAt = $sharing->created_at ?? now();
+
+            $events[] = [
+                'sharing_id'  => $sharing->id,
+                'event'       => CaseEventType::SHARING_CREATED->value,
+                'occurred_at' => $createdAt,
+                'payload'     => null,
+                'created_at'  => now(),
+                'updated_at'  => now(),
+            ];
+
+            $events[] = [
+                'sharing_id'  => $sharing->id,
+                'event'       => CaseEventType::NLP_ANALYZED->value,
+                'occurred_at' => $createdAt->copy()->addSeconds(20),
+                'payload'     => json_encode(['priority' => $sharing->priority]),
+                'created_at'  => now(),
+                'updated_at'  => now(),
+            ];
+        }
+
+        foreach (array_chunk($events, 200) as $chunk) {
+            CaseEvent::insert($chunk);
+        }
+
+        $this->command->info("NlpAnalysisSeeder: {$sharings->count()} NLP analyses seeded, ".count($events)." jejak awal dicatat.");
     }
 
     /**

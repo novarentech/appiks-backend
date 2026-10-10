@@ -42,6 +42,8 @@ use Illuminate\Database\Seeder;
  */
 class CounselingFlowSeeder extends Seeder
 {
+    use \Database\Seeders\Concerns\SeedsCaseTimeline;
+
     public function run(): void
     {
         $students  = User::where('role', 'student')->where('verified', true)->get();

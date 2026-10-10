@@ -3,6 +3,8 @@
 namespace App\Actions\Psychologist;
 
 use App\Actions\CreateBookingScheduleAction;
+use App\Actions\RecordCaseEvent;
+use App\Enums\CaseEventType;
 use App\Enums\BookingStatus;
 use App\Enums\CounselingStatus;
 use App\Enums\SlotStatus;
@@ -14,7 +16,8 @@ use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 class DecideReferralAction
 {
     public function __construct(
-        protected CreateBookingScheduleAction $createBookingAction
+        protected CreateBookingScheduleAction $createBookingAction,
+        protected RecordCaseEvent $recordEvent,
     ) {}
 
     public function handle(BookingSchedule $booking, array $data): BookingSchedule
@@ -29,6 +32,11 @@ class DecideReferralAction
                 $booking->update(['status' => BookingStatus::CONFIRMED->value]);
                 $slot->update(['status' => SlotStatus::CONFIRMED->value]);
                 $counseling->update(['status' => CounselingStatus::DIJADWALKAN->value]);
+
+                $this->recordEvent->handle(CaseEventType::BOOKING_CONFIRMED, $counseling->sharing_id, $counseling, payload: [
+                    'slot_date' => $slot->slot_date?->toDateString(),
+                    'slot_time' => $slot->slot_start_time?->format('H:i'),
+                ]);
 
                 GenerateGeminiReferralSummaryJob::dispatch($counseling);
             } elseif ($data['action'] === 'reschedule') {
@@ -53,6 +61,13 @@ class DecideReferralAction
                     BookingStatus::CONFIRMED->value
                 );
 
+                $this->recordEvent->handle(CaseEventType::BOOKING_RESCHEDULED, $counseling->sharing_id, $counseling, payload: [
+                    'reason'    => $data['reschedule_reason'],
+                    'from'      => $slot->slot_date?->toDateString().' '.$slot->slot_start_time?->format('H:i'),
+                    'slot_date' => $booking->slot?->slot_date?->toDateString(),
+                    'slot_time' => $booking->slot?->slot_start_time?->format('H:i'),
+                ]);
+
                 // Sesi tetap akan berjalan, jadi psikolog tetap butuh ringkasan klinis.
                 GenerateGeminiReferralSummaryJob::dispatch($counseling);
             } elseif ($data['action'] === 'reject') {
@@ -68,6 +83,10 @@ class DecideReferralAction
                 if ($counseling->status->isActive()) {
                     $counseling->update(['status' => CounselingStatus::MENUNGGU_JADWAL->value]);
                 }
+
+                $this->recordEvent->handle(CaseEventType::BOOKING_REJECTED, $counseling->sharing_id, $counseling, payload: [
+                    'reason' => $data['reschedule_reason'],
+                ]);
             }
 
             return $booking->refresh()->load(['slot', 'student', 'counseling']);

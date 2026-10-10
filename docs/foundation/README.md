@@ -34,6 +34,7 @@ Folder ini menjelaskan backend APPIKS **sebagaimana benar-benar dibangun** (as-b
 | [`10-architecture-and-integrations.md`](10-architecture-and-integrations.md) | Runtime, job/event/observer, kontrak NLP & Gemini |
 | [`11-environment-and-runbook.md`](11-environment-and-runbook.md) | Setup lokal, akun demo, seeder sebagai skenario, deploy |
 | [`12-ui-contract.md`](12-ui-contract.md) | Nilai enum ↔ copy UI verbatim, peta screen Figma |
+| [`13-case-timeline.md`](13-case-timeline.md) | Jejak penanganan kasus: tabel `case_events`, 28 jenis kejadian, akses per peran |
 
 ## Jalur baca
 
@@ -114,3 +115,4 @@ Sebuah dokumen dianggap **kadaluarsa** bila commit di `verified:`-nya lebih lama
 | `10-architecture-and-integrations.md` | `266f860` | 2026-10-09 | |
 | `11-environment-and-runbook.md` | working tree | 2026-10-10 | |
 | `12-ui-contract.md` | working tree | 2026-10-10 | sisi desain dari Figma, di luar repo |
+| `13-case-timeline.md` | working tree | 2026-10-10 | |

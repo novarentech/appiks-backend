@@ -8,6 +8,8 @@ Six status enums govern the workflow. Each diagram below shows only transitions 
 
 Enum values are Indonesian strings and are stored verbatim in the database. For the UI copy that corresponds to each, see [`12-ui-contract.md`](12-ui-contract.md).
 
+> Every status column below is **overwritten in place** — the tables here describe which transitions are possible, not which ones happened. The order of events for a given case is kept separately in `case_events`; see [`13-case-timeline.md`](13-case-timeline.md).
+
 ---
 
 ## `ReportStatus` — used by two tables

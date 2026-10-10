@@ -1,10 +1,10 @@
 # Data Model — Domain Map & Table Index
 
-<!-- verified: branch=dev commit=266f860 date=2026-10-09 scope=database/migrations,app/Models -->
-> **Verified against:** `dev` @ `266f860` · 2026-10-09
+<!-- verified: branch=dev commit=working-tree date=2026-10-10 scope=database/migrations,app/Models -->
+> **Verified against:** `dev` working tree · 2026-10-10
 > **Sources:** [`database/migrations/`](../../../database/migrations/) (31 files) · [`app/Models/`](../../../app/Models/) (23 models)
 
-**35 tables total: 26 domain tables + 9 platform tables.** There is deliberately **no single whole-schema ERD** — at this size it would be unreadable and would carry no domain meaning. Instead: one domain map below, then five ERD slices of at most ten entities each.
+**37 tables total: 28 domain tables + 9 platform tables.** There is deliberately **no single whole-schema ERD** — at this size it would be unreadable and would carry no domain meaning. Instead: one domain map below, then five ERD slices of at most ten entities each.
 
 Diagrams carry *shape*. The per-table dictionaries inside each slice carry *detail*.
 
@@ -68,6 +68,7 @@ Legend for **FK integrity**: ✅ all relation columns are real database foreign 
 | `counselings` | [`Counseling`](../../../app/Models/Counseling.php) | ✅ | ⚠️ `student_id`, `counselor_id`, `sharing_id` |
 | `counseling_logs` | [`CounselingLog`](../../../app/Models/CounselingLog.php) | ✅ | ✅ |
 | `counseling_log_histories` | [`CounselingLogHistory`](../../../app/Models/CounselingLogHistory.php) | ❌ **by design — append-only** | ✅ |
+| `case_events` | [`CaseEvent`](../../../app/Models/CaseEvent.php) | ❌ **by design — append-only** | ✅ |
 
 ### 04 · Referral & Consent → [`04-referral-and-consent.md`](04-referral-and-consent.md)
 

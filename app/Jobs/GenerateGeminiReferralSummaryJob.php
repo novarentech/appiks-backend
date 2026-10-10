@@ -3,6 +3,8 @@
 namespace App\Jobs;
 
 use App\Enums\ConsentStatus;
+use App\Actions\RecordCaseEvent;
+use App\Enums\CaseEventType;
 use App\Models\ClinicalSummary;
 use App\Models\Counseling;
 use App\Traits\InteractsWithGemini;
@@ -87,6 +89,12 @@ class GenerateGeminiReferralSummaryJob implements ShouldQueue
                 'summary_data' => $generatedText ?? '',
                 'raw_payload' => $payload,
             ]
+        );
+
+        app(RecordCaseEvent::class)->handle(
+            $generatedText ? CaseEventType::AI_SUMMARY_GENERATED : CaseEventType::AI_SUMMARY_FAILED,
+            $this->counseling->sharing_id,
+            $this->counseling,
         );
         
     }

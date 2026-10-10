@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\CounselingResolution;
+use App\Actions\RecordCaseEvent;
+use App\Enums\CaseEventType;
 use App\Enums\NlpAnalysisStatus;
 use App\Enums\Priority;
 use App\Enums\ReportStatus;
@@ -30,6 +32,8 @@ use Illuminate\Validation\Rule;
 class SharingController extends Controller
 {
     use ApiResponder;
+
+    public function __construct(private RecordCaseEvent $recordEvent) {}
 
     /**
      * Get all sharing data
@@ -148,6 +152,8 @@ class SharingController extends Controller
     {
         $sharing = Sharing::create($request->all());
 
+        $this->recordEvent->handle(CaseEventType::SHARING_CREATED, $sharing);
+
         $nlpAnalysis = $sharing->nlp()->create([
             'text' => $sharing->description,
         ]);
@@ -198,6 +204,8 @@ class SharingController extends Controller
     {
         $sharing->update($request->all());
 
+        $this->recordEvent->handle(CaseEventType::SHARING_REPLIED, $sharing);
+
         return $this->success(new SharingResource($sharing->load(['nlp', 'counseling'])));
     }
 
@@ -213,6 +221,8 @@ class SharingController extends Controller
             'status' => ReportStatus::DITINJAU->value,
             'acknowledged_at' => now(),
         ]);
+
+        $this->recordEvent->handle(CaseEventType::SHARING_ACKNOWLEDGED, $sharing);
 
         return $this->success(new SharingResource($sharing->load(['nlp', 'counseling'])));
     }
@@ -238,6 +248,14 @@ class SharingController extends Controller
             'action_confirmed' => $request->action_confirmed ?? false,
         ]);
 
+        // Dicatat sebagai dua kejadian: sebelumnya keduanya berbagi satu
+        // acknowledged_at sehingga waktu mulai menangani dan waktu memutuskan
+        // tindak lanjut tidak bisa dibedakan.
+        $this->recordEvent->handle(CaseEventType::SHARING_ACKNOWLEDGED, $sharing);
+        $this->recordEvent->handle(CaseEventType::FOLLOWUP_ACTION_CHOSEN, $sharing, payload: [
+            'action' => $sharing->action,
+        ]);
+
         return $this->success(new SharingResource($sharing->load(['nlp', 'counseling'])));
     }
 
@@ -258,6 +276,10 @@ class SharingController extends Controller
         ]);
         $sharing->nlp()->update([
             'status' => NlpAnalysisStatus::FALSE_POSITIVE->value,
+            'reason' => $request->reason,
+        ]);
+
+        $this->recordEvent->handle(CaseEventType::SHARING_MARKED_FALSE_POSITIVE, $sharing, payload: [
             'reason' => $request->reason,
         ]);
 

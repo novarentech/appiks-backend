@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Actions\RecordCaseEvent;
+use App\Enums\CaseEventType;
 use App\Enums\BookingStatus;
 use App\Enums\CounselingStatus;
 use App\Enums\SlotStatus;
@@ -38,6 +40,13 @@ class ExpirePendingReferrals extends Command
                 if ($counseling && $counseling->status->isActive()) {
                     $counseling->update(['status' => CounselingStatus::MENUNGGU_JADWAL->value]);
                 }
+
+                app(RecordCaseEvent::class)->handle(
+                    CaseEventType::BOOKING_EXPIRED,
+                    $counseling?->sharing_id,
+                    $counseling,
+                    payload: ['deadline_at' => $booking->deadline_at?->toIso8601String()],
+                );
 
                 // Dispatch notification event
                 BookingExpired::dispatch($booking);

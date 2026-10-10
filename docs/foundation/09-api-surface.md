@@ -4,7 +4,7 @@
 > **Verified against:** `dev` working tree · 2026-10-10 — generated from `php artisan route:list --json`
 > **Sources:** [`routes/api.php`](../../routes/api.php) · [`routes/web.php`](../../routes/web.php) · [`app/Http/Controllers/`](../../app/Http/Controllers/) (26 controllers)
 
-**164 routes total: 157 under `/api`, 7 elsewhere.** Exactly two middleware contexts exist — public, and `auth:api`. **No route carries a role check**; see [`03-authorization.md`](03-authorization.md) for where role decisions actually live.
+**166 routes total: 159 under `/api`, 7 elsewhere.** Exactly two middleware contexts exist — public, and `auth:api`. **No route carries a role check**; see [`03-authorization.md`](03-authorization.md) for where role decisions actually live.
 
 > **Non-goal: this document does not describe request or response bodies.** Those are generated at runtime by Dedoc Scramble and are always current:
 > - `GET /docs` — browsable UI with Try-It
@@ -194,6 +194,8 @@ See [`08-state-machines.md`](08-state-machines.md) for why four of these are unr
 | POST | `api/counseling/{counseling}/consent` | `@sendConsent` | `Policy::storeLog` | assigned counselor |
 | PATCH | `api/counseling/{counseling}/cancel` | `@cancel` | `Policy::manageSchedule` | assigned counselor — status must not be terminal |
 | PATCH | `api/counseling/{counseling}/repropose` | `@repropose` | `Policy::manageSchedule` | assigned counselor — status must be `ditolak` |
+| GET | `api/sharing/{sharing}/timeline` | `CaseTimelineController@bySharing` | `SharingPolicy::viewTimeline` | **headteacher only** — see [`13-case-timeline.md`](13-case-timeline.md) |
+| GET | `api/counseling/{counseling}/timeline` | `CaseTimelineController@byCounseling` | `CounselingPolicy::viewTimeline` | **headteacher only** |
 | PATCH | `api/student/counselings/{counseling}/acknowledge` | `@acknowledge` | `Policy::acknowledge` | the counseling's student, while it is awaiting their response |
 
 ## Student app surface

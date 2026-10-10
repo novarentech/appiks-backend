@@ -21,7 +21,9 @@ return new class extends Migration
             $table->id();
             $table->foreignIdFor(User::class, 'student_id');
             $table->foreignIdFor(User::class, 'counselor_id')->nullable();
-            $table->foreignIdFor(Sharing::class);
+            // Nullable: konseling yang dijadwalkan dari sebuah laporan tidak
+            // selalu punya curhat sebagai asal (lihat ScheduleReportCounselingAction).
+            $table->foreignIdFor(Sharing::class)->nullable()->constrained()->nullOnDelete();
             $table->string('room')->nullable();
             $table->string('notes')->nullable();
             $table->string('reason')->nullable();

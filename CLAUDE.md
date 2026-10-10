@@ -26,6 +26,7 @@ Start at [`docs/foundation/README.md`](docs/foundation/README.md). Read only the
 | What can each role do? | [`docs/foundation/06-user-activities.md`](docs/foundation/06-user-activities.md) · [`04-user-stories.md`](docs/foundation/04-user-stories.md) |
 | How do I run it, what demo accounts exist? | [`docs/foundation/11-environment-and-runbook.md`](docs/foundation/11-environment-and-runbook.md) |
 | What does the UI call this value? | [`docs/foundation/12-ui-contract.md`](docs/foundation/12-ui-contract.md) |
+| How is a case's history tracked? | [`docs/foundation/13-case-timeline.md`](docs/foundation/13-case-timeline.md) |
 
 ## Do not treat these as truth
 
@@ -39,6 +40,7 @@ Start at [`docs/foundation/README.md`](docs/foundation/README.md). Read only the
 4. **A counselor may reply to a curhat once only.**
 5. **Creating a report requires `last_mood` to be `sad` or `angry`.**
 6. **`counseling_log_histories` is append-only** — it is the clinical audit trail.
+7. **`case_events` is append-only** — it is the case timeline, and the only place the *order* of events is kept. No runtime code may update or delete a row. Record new transitions through `RecordCaseEvent`, never with an observer: four write paths in the chain use query-builder mass updates and fire no model events.
 
 ## Naming traps
 
@@ -78,6 +80,8 @@ Drift has already happened once in this repo. If you change the left column, upd
 | `app/Enums/**` | `docs/foundation/08-state-machines.md` (and `01-glossary.md` for a new term) |
 | `app/Policies/**`, any `Gate::` or `authorize()` | `docs/foundation/03-authorization.md` |
 | `app/Jobs/**`, `app/Observers/**`, `app/Listeners/**` | `docs/foundation/10-architecture-and-integrations.md` |
+| `app/Enums/CaseEventType.php`, `app/Actions/RecordCaseEvent.php`, `app/Support/CaseTimelineVisibility.php` | `docs/foundation/13-case-timeline.md` |
+| a new state transition anywhere in the case chain | record it via `RecordCaseEvent` **and** add its row to `13-case-timeline.md` |
 | feature behaviour | the relevant row in `docs/foundation/04-user-stories.md` |
 
 Also bump the `verified:` header comment at the top of every document you touch.

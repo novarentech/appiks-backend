@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Enums\CaseEventType;
 use App\Enums\CounselingStatus;
 use App\Events\CounselingScheduled;
 use App\Models\Counseling;
@@ -29,6 +30,13 @@ class ScheduleReportCounselingAction
             'status' => CounselingStatus::MENUNGGU->value,
             'scheduled_at' => $scheduledAt,
         ]);
+
+        app(RecordCaseEvent::class)->handle(
+            CaseEventType::COUNSELING_SCHEDULE_PROPOSED,
+            $counseling->sharing_id,
+            $counseling,
+            payload: ['scheduled_at' => $scheduledAt],
+        );
 
         // Dispatch event to handle decoupled side-effects
         CounselingScheduled::dispatch($counseling);

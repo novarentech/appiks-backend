@@ -35,6 +35,8 @@ use Illuminate\Database\Seeder;
  */
 class ReferralFlowSeeder extends Seeder
 {
+    use \Database\Seeders\Concerns\SeedsCaseTimeline;
+
     private PsychologistProfile $psychologistProfile;
 
     public function run(): void
@@ -146,7 +148,7 @@ class ReferralFlowSeeder extends Seeder
         );
 
         // Consent: 3 kategori disetujui
-        CounselingConsent::create([
+        $this->upsertConsent($counseling, [
             'counseling_id' => $counseling->id,
             'status'        => ConsentStatus::GRANTED->value,
             'scopes'        => ['mood_history', 'sharing_history', 'assesment_logs'],
@@ -259,7 +261,7 @@ class ReferralFlowSeeder extends Seeder
         );
 
         // Consent: 1 kategori (mood_history)
-        CounselingConsent::create([
+        $this->upsertConsent($counseling, [
             'counseling_id' => $counseling->id,
             'status'        => ConsentStatus::GRANTED->value,
             'scopes'        => ['mood_history'],
@@ -325,7 +327,7 @@ class ReferralFlowSeeder extends Seeder
         );
 
         // Consent: 2 kategori (sharing_history, assesment_logs)
-        CounselingConsent::create([
+        $this->upsertConsent($counseling, [
             'counseling_id' => $counseling->id,
             'status'        => ConsentStatus::GRANTED->value,
             'scopes'        => ['sharing_history', 'assesment_logs'],
@@ -400,7 +402,7 @@ class ReferralFlowSeeder extends Seeder
         );
 
         // Consent: 1 kategori (assesment_logs)
-        CounselingConsent::create([
+        $this->upsertConsent($counseling, [
             'counseling_id' => $counseling->id,
             'status'        => ConsentStatus::GRANTED->value,
             'scopes'        => ['assesment_logs'],
@@ -468,7 +470,7 @@ class ReferralFlowSeeder extends Seeder
             scheduledAt: Carbon::parse($slotDate)->setTime(9, 0),
         );
 
-        CounselingConsent::create([
+        $this->upsertConsent($counseling, [
             'counseling_id' => $counseling->id,
             'status'        => ConsentStatus::GRANTED->value,
             'scopes'        => ['mood_history', 'sharing_history', 'assesment_logs'],
@@ -543,7 +545,7 @@ class ReferralFlowSeeder extends Seeder
             scheduledAt: null,
         );
 
-        CounselingConsent::create([
+        $this->upsertConsent($counseling, [
             'counseling_id' => $counseling->id,
             'status'        => ConsentStatus::PENDING->value,
             'scopes'        => null,
@@ -557,6 +559,29 @@ class ReferralFlowSeeder extends Seeder
     // ────────────────────────────────────────────────────────────────────────
     // Helpers
     // ────────────────────────────────────────────────────────────────────────
+
+    /**
+     * CounselingObserver sudah membuat satu consent berstatus pending untuk
+     * setiap konseling external. Perbarui baris itu alih-alih membuat baris
+     * kedua — duplikat consent membuat hitungan "menunggu persetujuan" di
+     * dasbor siswa menggelembung dan memunculkan langkah ganda di jejak kasus.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    private function upsertConsent(Counseling $counseling, array $attributes): CounselingConsent
+    {
+        unset($attributes['counseling_id']);
+
+        $consent = $counseling->consents()->oldest('id')->first();
+
+        if ($consent) {
+            $consent->forceFill($attributes)->save();
+
+            return $consent;
+        }
+
+        return $counseling->consents()->create($attributes);
+    }
 
     private function createReferralBase(
         User $student,
@@ -579,8 +604,19 @@ class ReferralFlowSeeder extends Seeder
             'updated_at'   => $createdDate,
         ]);
 
-        $sharing = Sharing::where('user_id', $student->id)->latest()->first()
-            ?? Sharing::create([
+        $sharing = Sharing::where('user_id', $student->id)->latest()->first();
+
+        if ($sharing) {
+            // Curhat lama ini diadopsi sebagai asal kasus, jadi tanggalnya
+            // diselaraskan agar mendahului laporan. Tanpa ini curhatnya bisa
+            // bertanggal setelah konselingnya, dan jejak kasusnya terbaca mundur.
+            $sharing->forceFill([
+                'created_at'      => $createdDate->copy()->subDay(),
+                'acknowledged_at' => $createdDate,
+                'priority'        => 'tinggi',
+            ])->save();
+        } else {
+            $sharing = Sharing::create([
                 'user_id'     => $student->id,
                 'title'       => 'Curhat saya ke BK',
                 'description' => 'Saya sudah beberapa waktu merasa tidak bersemangat dan sulit fokus.',
@@ -593,6 +629,7 @@ class ReferralFlowSeeder extends Seeder
                 'created_at'  => $createdDate,
                 'updated_at'  => $createdDate,
             ]);
+        }
 
         return [$report, $sharing];
     }

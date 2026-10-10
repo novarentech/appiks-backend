@@ -29,9 +29,32 @@ class Sharing extends Model
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * Satu curhat bisa menghasilkan lebih dari satu sesi konseling — tidak ada
+     * unique index pada counselings.sharing_id dan tidak ada guard di
+     * CreateCounselingRequest. Relasi tunggal ini dipertahankan karena dipakai
+     * sebagai objek di banyak endpoint, tapi sekarang deterministik: yang
+     * terbaru, bukan baris mana saja yang dikembalikan MySQL lebih dulu.
+     */
     public function counseling()
     {
-        return $this->hasOne(Counseling::class);
+        return $this->hasOne(Counseling::class)->latestOfMany();
+    }
+
+    /**
+     * Seluruh sesi konseling yang berasal dari curhat ini.
+     */
+    public function counselings()
+    {
+        return $this->hasMany(Counseling::class);
+    }
+
+    /**
+     * Jejak penanganan kasus ini, terurut.
+     */
+    public function caseEvents()
+    {
+        return $this->hasMany(CaseEvent::class)->orderBy('occurred_at')->orderBy('id');
     }
 
     /**

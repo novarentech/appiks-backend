@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Actions\StoreCounselingLogAction;
 use App\Enums\BookingStatus;
+use App\Actions\RecordCaseEvent;
+use App\Enums\CaseEventType;
 use App\Enums\CounselingMethod;
 use App\Enums\CounselingResolution;
 use App\Enums\ConsentStatus;
@@ -24,6 +26,8 @@ use Illuminate\Validation\Rule;
 class CounselingController extends Controller
 {
     use ApiResponder;
+
+    public function __construct(private RecordCaseEvent $recordEvent) {}
 
     /**
      * Get all counseling
@@ -105,11 +109,13 @@ class CounselingController extends Controller
                 'status' => CounselingStatus::DIJADWALKAN->value
             ]);
             $counseling->sharing?->update(['status' => ReportStatus::DIJADWALKAN->value]);
+            $this->recordEvent->handle(CaseEventType::COUNSELING_ACCEPTED, $counseling->sharing_id, $counseling);
         } else {
             $counseling->update([
                 'status' => CounselingStatus::DITOLAK->value
             ]);
             $counseling->sharing?->update(['status' => ReportStatus::DITOLAK->value]);
+            $this->recordEvent->handle(CaseEventType::COUNSELING_DECLINED, $counseling->sharing_id, $counseling);
         }
         return $this->success(new CounselingResource($counseling));
     }
@@ -138,6 +144,8 @@ class CounselingController extends Controller
         ]);
         $counseling->sharing?->update(['status' => ReportStatus::DIBATALKAN->value]);
 
+        $this->recordEvent->handle(CaseEventType::COUNSELING_CANCELLED, $counseling->sharing_id, $counseling);
+
         return $this->success(new CounselingResource($counseling));
     }
 
@@ -163,6 +171,10 @@ class CounselingController extends Controller
             return $this->error('Jadwal hanya dapat diajukan ulang setelah ditolak siswa.', 422);
         }
 
+        // Dibaca sebelum ditimpa: scheduled_at diubah di tempat, jadi usulan
+        // sebelumnya tidak akan bisa dipulihkan dari tabel counselings.
+        $previousSchedule = $counseling->scheduled_at?->toIso8601String();
+
         $counseling->update([
             'status'       => CounselingStatus::DIJADWAL_ULANG->value,
             'scheduled_at' => $validated['date'].' '.$validated['time'],
@@ -170,6 +182,11 @@ class CounselingController extends Controller
             'notes'        => $validated['notes'] ?? $counseling->notes,
         ]);
         $counseling->sharing?->update(['status' => ReportStatus::MENUNGGU_PERSETUJUAN->value]);
+
+        $this->recordEvent->handle(CaseEventType::COUNSELING_REPROPOSED, $counseling->sharing_id, $counseling, payload: [
+            'from' => $previousSchedule,
+            'to'   => $counseling->scheduled_at?->toIso8601String(),
+        ]);
 
         return $this->success(new CounselingResource($counseling));
     }
@@ -207,6 +224,8 @@ class CounselingController extends Controller
         $consent = $counseling->consents()->create([
             'status' => ConsentStatus::PENDING,
         ]);
+
+        $this->recordEvent->handle(CaseEventType::CONSENT_REQUESTED, $counseling->sharing_id, $counseling);
 
         return $this->created($consent, 'Digital consent request initiated successfully.');
     }

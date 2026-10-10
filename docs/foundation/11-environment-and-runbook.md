@@ -150,6 +150,7 @@ Artinya: seeder ini **butuh layanan NLP hidup** untuk menghasilkan data yang ber
 | `SharingSeeder` | 3 per siswa, berotasi melalui kesepuluh nilai `ReportStatus` |
 | `SelfHelpSeeder` | 30 hari per siswa, acak dari empat jenis |
 | `QuotesSeeder`, `VideoSeeder`, `ArticleSeeder`, `TagSeeder`, `CloudSeeder` | Data konten dan gamifikasi |
+| `CaseTimelineSeeder` | **Dijalankan paling akhir** di `DatabaseSeeder` dan `DemoCaseSeeder`. Membangun jejak kasus (`case_events`) dengan menurunkannya dari timestamp fixture yang sudah ada — lihat [`13-case-timeline.md`](13-case-timeline.md). Idempoten |
 | `LocationSeeder` | Memanggil `import:locations` |
 | `GeminiApi` | **Dikomentari** di `DatabaseSeeder`. Memecah `GEMINI_API_KEYS` menjadi baris pool rotasi |
 | `AiGenerated` | **Dikomentari, dan rusak** — menyisipkan kolom `section` yang tidak ada di migrasi. `[DEAD]` |

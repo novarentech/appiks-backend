@@ -88,6 +88,10 @@ Only **two** listeners are bound, both in `AppServiceProvider`:
 
 **Four events are dispatched with no listener at all:** `BookingScheduleCreated`, `BookingExpired`, `CounselingScheduled`, `CounselingLogStored`. The code comment in `CreateBookingScheduleAction` says "listeners attached in future tickets". Consequence: **nothing in the referral flow notifies anyone of anything.**
 
+### Case-event recording
+
+[`RecordCaseEvent`](../../app/Actions/RecordCaseEvent.php) is called explicitly at 27 transition sites to write the append-only case timeline. It is **not** an observer, because four write paths in the chain use query-builder mass updates and fire no model events — `ProcessNlpAnalysisJob`, the false-positive path, `UpdateRelatedSharingPriority` and `ClearCutdown`. It never throws; a failed insert is logged and swallowed. Full detail, including the deliberate deviation from [`agent/RULE_OF_ARCHITECT.md`](../../agent/RULE_OF_ARCHITECT.md) §6, is in [`13-case-timeline.md`](13-case-timeline.md).
+
 ### Observers
 
 | Observer | Model | Trigger | Effect |

@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Enums\CaseEventType;
 use App\Enums\BookingStatus;
 use App\Enums\CounselingStatus;
 use App\Enums\SlotStatus;
@@ -34,6 +35,17 @@ class CreateBookingScheduleAction
             ]);
 
             $this->syncSlotAndCounseling($status, $slot, $counseling);
+
+            app(RecordCaseEvent::class)->handle(
+                CaseEventType::BOOKING_CREATED,
+                $counseling->sharing_id,
+                $counseling,
+                payload: [
+                    'slot_date'   => $slot->slot_date?->toDateString(),
+                    'slot_time'   => $slot->slot_start_time?->format('H:i'),
+                    'deadline_at' => $booking->deadline_at?->toIso8601String(),
+                ],
+            );
 
             // Dispatch event — listeners attached in future tickets
             BookingScheduleCreated::dispatch($booking);

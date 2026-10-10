@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\RecordCaseEvent;
+use App\Enums\CaseEventType;
 use App\Enums\BookingStatus;
 use App\Enums\ConsentStatus;
 use App\Enums\MoodStatus;
@@ -191,6 +193,12 @@ class PsychologistSummaryController extends Controller
         if (!$booking) {
             abort(403, 'Akses ditolak. Anda tidak memiliki rujukan aktif untuk sesi ini.');
         }
+
+        app(RecordCaseEvent::class)->handle(
+            CaseEventType::CASE_CLOSED,
+            $counseling->sharing_id,
+            $counseling,
+        );
 
         $booking->update(['status' => BookingStatus::FINISHED->value]);
         $counseling->update(['status' => CounselingStatus::SELESAI->value]);

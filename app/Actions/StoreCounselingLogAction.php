@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Enums\CaseEventType;
 use App\Enums\CounselingStatus;
 use App\Enums\ReportStatus;
 use App\Events\CounselingLogStored;
@@ -42,6 +43,16 @@ class StoreCounselingLogAction
                 'result' => 'Konseling selesai dengan resolusi: ' . $validated['resolution_status'],
             ]);
         }
+
+        app(RecordCaseEvent::class)->handle(
+            CaseEventType::COUNSELING_LOG_STORED,
+            $counseling->sharing_id,
+            $counseling,
+            payload: [
+                'resolution' => $validated['resolution_status'],
+                'method'     => $validated['session_mode'],
+            ],
+        );
 
         // Dispatch event for decoupled side effects
         CounselingLogStored::dispatch($counselingLog);

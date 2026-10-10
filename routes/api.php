@@ -120,6 +120,11 @@ Route::middleware('auth:api')->group(function () {
     Route::post('counseling/{counseling}/consent', [CounselingController::class, 'sendConsent']);
     Route::patch('counseling/{counseling}/cancel', [CounselingController::class, 'cancel']);
     Route::patch('counseling/{counseling}/repropose', [CounselingController::class, 'repropose']);
+
+    // Jejak penanganan kasus. Akses saat ini terbatas pada Kepala Sekolah
+    // lewat SharingPolicy::viewTimeline / CounselingPolicy::viewTimeline.
+    Route::get('sharing/{sharing}/timeline', [App\Http\Controllers\CaseTimelineController::class, 'bySharing']);
+    Route::get('counseling/{counseling}/timeline', [App\Http\Controllers\CaseTimelineController::class, 'byCounseling']);
     Route::prefix('admin')->group(function () {
         Route::patch('psychologists/{psychologist}/toggle', [PsychologistController::class, 'toggleStatus']);
         Route::apiResource('psychologists', PsychologistController::class);

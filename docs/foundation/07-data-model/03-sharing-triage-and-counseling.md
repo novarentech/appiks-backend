@@ -167,7 +167,7 @@ Creating a report is gated on mood: only allowed when the student's `last_mood` 
 | `student_id` | bigint | no | — | → `users.id` logically, **no database FK** |
 | `counselor_id` | bigint | yes | null | → `users.id` logically, **no database FK** |
 | `psychologist_id` | bigint FK | yes | null | → **`users.id`**, null on delete. Properly constrained. |
-| `sharing_id` | bigint | no | — | → `sharings.id` logically, **no database FK**, and **not nullable** despite being conceptually optional |
+| `sharing_id` | bigint FK | yes | null | → `sharings.id`, null on delete. **Now nullable and constrained** — it used to be NOT NULL with no default while the code treated it as optional, which made `POST /api/report/{report}/schedule-meeting` fail outright |
 | `room` | string | yes | null | Overridden with the psychologist's `institution_name` in API output when `type = external` |
 | `notes` | string | yes | null | |
 | `reason` | string | yes | null | Required when referring externally |

@@ -86,6 +86,7 @@ Sumber: [`app/Enums/MoodStatus.php`](../../app/Enums/MoodStatus.php), accessor `
 | Resolusi | [`CounselingResolution`](../../app/Enums/CounselingResolution.php) | Tiga nilai. `'Perlu Rujukan Professional'` adalah **pemicu rujukan**; dua lainnya menutup kasus sebagai bukan-kritis atau bukan-prioritas. |
 | Metode | [`CounselingMethod`](../../app/Enums/CounselingMethod.php) | `'Tatap Muka'` / `'Video Call'` / `'Chat'`. Disimpan di `counselings.method` dan di `counseling_logs.session_mode`. |
 | Catatan klinis | `counseling_logs.clinical_notes` | Cast `encrypted` — terenkripsi di level aplikasi, **tidak bisa di-query atau dicari lewat SQL**. |
+| Jejak kasus / timeline penanganan | tabel `case_events` | Append-only. Satu-satunya tempat **urutan** kejadian tersimpan — kolom status di tabel lain ditimpa di tempat. 28 jenis kejadian di [`CaseEventType`](../../app/Enums/CaseEventType.php). Akses saat ini hanya Kepala Sekolah. Lihat [`13-case-timeline.md`](13-case-timeline.md) |
 | Audit trail | tabel `counseling_log_histories` | Append-only. Setiap perubahan `clinical_notes` otomatis menyimpan nilai lamanya beserta `updated_by`. Tidak punya soft delete. |
 | Persetujuan data / consent | tabel `counseling_consents` | Izin siswa membagikan datanya ke psikolog. Dibuat otomatis berstatus `pending` begitu konseling `external` dibuat. |
 | Scope consent | `counseling_consents.scopes` (JSON) | Tepat tiga nilai yang sah: `mood_history`, `sharing_history`, **`assesment_logs`**. Minimal satu wajib dipilih saat memberi izin. |

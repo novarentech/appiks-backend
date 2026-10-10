@@ -137,6 +137,7 @@ User::factory()->create([
             PsychologistSeeder::class,
             PsychologistSlotSeeder::class,
             ReferralFlowSeeder::class,
+            CaseTimelineSeeder::class,   // paling akhir: jejak diturunkan dari fixture
         ]);
     }
 }

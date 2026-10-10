@@ -33,7 +33,8 @@ class DatabaseSeeder extends Seeder
             // ── User-flow seeders (order-sensitive) ──────────────────────
             NlpAnalysisSeeder::class,    // needs: sharings
             CounselingFlowSeeder::class, // needs: reports, sharings, users
-            ReferralFlowSeeder::class,   // needs: counselings, psychologist_slots
+            ReferralFlowSeeder::class,
+            CaseTimelineSeeder::class,   // paling akhir: jejak diturunkan dari fixture   // needs: counselings, psychologist_slots
         ]);
     }
 }

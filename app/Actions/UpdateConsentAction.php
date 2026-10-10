@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Enums\CaseEventType;
 use App\Enums\ConsentStatus;
 use App\Enums\CounselingStatus;
 use App\Models\CounselingConsent;
@@ -33,6 +34,16 @@ class UpdateConsentAction
         }
 
         $this->syncCounselingStatus($consent, $isGranted);
+
+        app(RecordCaseEvent::class)->handle(
+            $isGranted ? CaseEventType::CONSENT_GRANTED : CaseEventType::CONSENT_REJECTED,
+            $consent->counseling?->sharing_id,
+            $consent->counseling,
+            payload: $isGranted ? [
+                'scopes'       => $scopes,
+                'scopes_count' => count($scopes),
+            ] : [],
+        );
 
         return $consent;
     }
