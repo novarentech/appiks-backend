@@ -50,6 +50,12 @@ To run this project successfully, ensure the following environment variables are
 - **Automated Documentation**: Live API documentation powered by **Dedoc Scramble**.
 - **Data Operations**: Bulk user management and record exports via Excel (`maatwebsite/excel`).
 
+## 📚 Dokumentasi
+
+Foundation docs for this backend — what it is, who the actors are, how data flows, and where authorization is enforced — live in **[`docs/foundation/`](docs/foundation/README.md)**.
+
+Start there before making changes. Endpoint payload schemas are generated at runtime by Scramble at `/docs`; `docs/tasks/` and `agent/screens/` are archives of design intent and have diverged from the code.
+
 ---
 
 ## 🏢 About Novaren Tech
