@@ -101,16 +101,16 @@ Sebuah dokumen dianggap **kadaluarsa** bila commit di `verified:`-nya lebih lama
 | `07-data-model/README.md` | `266f860` | 2026-10-09 | |
 | `07-data-model/01-identity-and-tenancy.md` | `266f860` | 2026-10-09 | |
 | `07-data-model/02-wellbeing-and-assessment.md` | `266f860` | 2026-10-09 | |
-| `07-data-model/03-sharing-triage-and-counseling.md` | `266f860` | 2026-10-09 | |
-| `07-data-model/04-referral-and-consent.md` | `266f860` | 2026-10-09 | |
+| `07-data-model/03-sharing-triage-and-counseling.md` | working tree | 2026-10-10 | |
+| `07-data-model/04-referral-and-consent.md` | working tree | 2026-10-10 | |
 | `07-data-model/05-content-and-engagement.md` | `266f860` | 2026-10-09 | |
 | `00-product-overview.md` | `266f860` | 2026-10-09 | |
-| `03-authorization.md` | `266f860` | 2026-10-09 | |
+| `03-authorization.md` | working tree | 2026-10-10 | |
 | `04-user-stories.md` | `266f860` | 2026-10-09 | |
-| `05-user-flows.md` | `266f860` | 2026-10-09 | |
+| `05-user-flows.md` | working tree | 2026-10-10 | |
 | `06-user-activities.md` | `266f860` | 2026-10-09 | |
-| `08-state-machines.md` | `266f860` | 2026-10-09 | |
-| `09-api-surface.md` | `266f860` | 2026-10-09 | |
+| `08-state-machines.md` | working tree | 2026-10-10 | |
+| `09-api-surface.md` | working tree | 2026-10-10 | |
 | `10-architecture-and-integrations.md` | `266f860` | 2026-10-09 | |
-| `11-environment-and-runbook.md` | `266f860` | 2026-10-09 | |
-| `12-ui-contract.md` | `266f860` | 2026-10-09 | sisi desain dari Figma, di luar repo |
+| `11-environment-and-runbook.md` | working tree | 2026-10-10 | |
+| `12-ui-contract.md` | working tree | 2026-10-10 | sisi desain dari Figma, di luar repo |

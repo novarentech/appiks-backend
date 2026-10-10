@@ -14,17 +14,22 @@ class DecideReferralRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'action'        => ['required', 'string', 'in:confirm,reschedule'],
-            'reschedule_reason' => ['required_if:action,reschedule', 'string', 'nullable', 'max:1000'],
-            'slot_id' => ['required_if:action,reschedule', 'exists:psychologist_slots,id'],
+            /**
+             * confirm   — terima jadwal yang diajukan siswa
+             * reschedule — geser ke slot lain (auto-setuju, siswa diinformasikan)
+             * reject    — tolak rujukannya
+             */
+            'action'            => ['required', 'string', 'in:confirm,reschedule,reject'],
+            'reschedule_reason' => ['required_if:action,reschedule,reject', 'string', 'nullable', 'max:1000'],
+            'slot_id'           => ['required_if:action,reschedule', 'exists:psychologist_slots,id'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'reschedule_reason.required_if' => 'Alasan penjadwalan ulang wajib diisi jika Anda menolak rujukan.',
-            'slot_id.required_if' => 'Slot wajib diisi jika Anda menolak rujukan.',
+            'reschedule_reason.required_if' => 'Alasan wajib diisi jika Anda menggeser jadwal atau menolak rujukan.',
+            'slot_id.required_if' => 'Slot pengganti wajib dipilih jika Anda menggeser jadwal.',
             'slot_id.exists' => 'Slot tidak ditemukan.',
         ];
     }

@@ -1,7 +1,7 @@
 # User Flows
 
-<!-- verified: branch=dev commit=266f860 date=2026-10-09 scope=app/Http/Controllers,app/Actions,app/Jobs,app/Observers,app/Console/Commands -->
-> **Terverifikasi terhadap:** `dev` @ `266f860` · 2026-10-09
+<!-- verified: branch=dev commit=working-tree date=2026-10-10 scope=app/Http/Controllers,app/Actions,app/Jobs,app/Observers,app/Console/Commands -->
+> **Terverifikasi terhadap:** `dev` working tree · 2026-10-10
 > **Sumber:** controller, action, job, dan observer yang disitasi di masing-masing alur
 
 Dokumen ini menjelaskan **serah-terima antar orang** — bagaimana satu kasus berpindah tangan dari siswa ke Guru BK ke psikolog, dan apa yang terjadi di sistem pada setiap perpindahan. Untuk daftar tugas satu aktor, lihat [`06-user-activities.md`](06-user-activities.md).
@@ -224,7 +224,9 @@ sequenceDiagram
         API->>API: booking lama rejected + reject_reason
         API->>API: booking BARU langsung confirmed
     else lewat tenggat
-        SYS->>API: booking expired; slot kembali available
+        SYS->>API: booking expired; slot available
+        SYS->>API: counseling kembali ke menunggu_jadwal
+        SISWA->>API: POST /api/student/bookings (pilih jadwal baru)
     end
     PSI->>API: GET /api/psychologist/referrals/{counseling}/summary
     PSI->>API: POST .../feedback {clinical_notes, rating}
@@ -242,7 +244,8 @@ sequenceDiagram
 | 5 | Siswa mengajukan booking | sama | [`CreateBookingScheduleAction`](../../app/Actions/CreateBookingScheduleAction.php) memakai `lockForUpdate()` agar tidak ada dua siswa merebut slot sama; `deadline_at = now()+24 jam`; memicu `BookingScheduleCreated` (**tanpa listener**) |
 | 6a | Psikolog konfirmasi | `BookingSchedulePolicy::decide` + status harus `pending` | Booking dan slot → `confirmed`; [`GenerateGeminiReferralSummaryJob`](../../app/Jobs/GenerateGeminiReferralSummaryJob.php) dijalankan |
 | 6b | Psikolog mengajukan jadwal lain | `decide` | Booking lama `rejected` + `reject_reason`; **booking baru dibuat langsung `confirmed`** |
-| 6c | Tenggat lewat | `deadline_at <= now()` dan status `pending` | Booking `expired`, slot kembali `available`, memicu `BookingExpired` (**tanpa listener**) |
+| 6c | Tenggat lewat | `deadline_at <= now()` dan status `pending` | Booking `expired`, slot kembali `available`, **counseling kembali ke `menunggu_jadwal`** sehingga siswa bisa memilih slot baru pada rujukan yang sama; memicu `BookingExpired` (**tanpa listener**) |
+| 6d | Psikolog menolak | `decide` `action=reject`, booking harus `pending` | Booking `rejected` + alasan, slot dilepas, counseling kembali ke `menunggu_jadwal` |
 | 7 | Psikolog membaca ringkasan | psikolog yang ditugaskan + consent `granted` | Identitas asli siswa (nama, NISN, kelas) terbuka di sini |
 | 8 | Psikolog memberi umpan balik | sama | Menutup empat record sekaligus: booking `finished`, counseling `selesai`, curhat `Diselesaikan`, dan menyimpan catatan + rating di `clinical_summaries` |
 
@@ -256,7 +259,7 @@ sequenceDiagram
 
 **Tiga hal yang perlu diketahui tentang alur ini**
 
-1. **`[GAP]` Reschedule melewati siswa.** Booking pengganti dibuat sudah `confirmed`, dengan `deadline_at` sengaja di masa lalu. Siswa tidak pernah menyetujui jadwal baru, padahal desain menggambarkan jabat tangan dua arah ("Psikolog mengajukan perubahan jadwal" → siswa menyetujui/menolak).
+1. **Reschedule memang melewati siswa — ini aturan produk, bukan cacat.** Booking lama ditandai `rescheduled`, booking pengganti dibuat sudah `confirmed`, dan siswa hanya diinformasikan. Screen desain `Psikolog mengajukan perubahan jadwal` (`#5609:39677`) tidak punya tombol setuju/tolak, hanya "Lihat Detail" — konsisten dengan auto-setuju. Jejaknya dibaca frontend lewat `latest_booking.was_rescheduled`.
 2. **`[PARTIAL]` Penyamaran kata sensitif dimatikan.** Field tetap bernama `masked_text`, tapi call site `maskDynamicNlpKeywords()` dikomentari di [`ReferralPayloadBuilder.php:81`](../../app/Services/ReferralPayloadBuilder.php) — isinya curhat verbatim. Ini konsisten dengan prompt sistem yang memerintahkan "tanpa melakukan penyamaran kata sensitif", tapi nama field-nya kini menyesatkan.
 3. **`[SPEC-ONLY]` Consent tidak bisa dicabut.** Tidak ada state `revoked`, tidak ada endpoint. Setelah diberikan, akses psikolog tidak bisa ditarik lewat API.
 
@@ -387,5 +390,5 @@ Supaya jelas apa yang bukan sekadar belum terdokumentasi:
 | Reset atau lupa password | Tidak ada. Tabel `password_reset_tokens` tidak dipakai |
 | Pemantauan isi jurnal self-help | Jurnal tidak pernah dianalisis NLP, padahal teksnya bebas |
 | Alert dari pola mood | Mood tidak memicu apa pun; hanya curhat yang memicu |
-| Persetujuan ulang siswa atas jadwal usulan psikolog | `[GAP]` — lihat FLOW-4 |
+| Persetujuan ulang siswa atas jadwal usulan psikolog | Tidak ada **secara sengaja** — reschedule bersifat auto-setuju, lihat FLOW-4 |
 | Penandaan false negative pada NLP | Hanya seeder yang bisa menulisnya; tidak ada endpoint |

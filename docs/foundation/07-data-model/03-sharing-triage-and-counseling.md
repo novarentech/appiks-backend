@@ -1,7 +1,7 @@
 # 03 · Sharing, Triage & Counseling
 
-<!-- verified: branch=dev commit=266f860 date=2026-10-09 scope=database/migrations,app/Models,app/Observers,app/Jobs -->
-> **Verified against:** `dev` @ `266f860` · 2026-10-09
+<!-- verified: branch=dev commit=working-tree date=2026-10-10 scope=database/migrations,app/Models,app/Observers,app/Jobs -->
+> **Verified against:** `dev` working tree · 2026-10-10
 > **Sources:** [`2025_09_03_183237_create_sharings_table.php`](../../../database/migrations/2025_09_03_183237_create_sharings_table.php) · [`2025_09_04_010926_create_reports_table.php`](../../../database/migrations/2025_09_04_010926_create_reports_table.php) · [`2026_05_20_115200_create_nlp_analyses_table.php`](../../../database/migrations/2026_05_20_115200_create_nlp_analyses_table.php) · [`2026_05_26_101154_create_counseling_table.php`](../../../database/migrations/2026_05_26_101154_create_counseling_table.php) · [`2026_06_12_110002_create_counseling_logs_table.php`](../../../database/migrations/2026_06_12_110002_create_counseling_logs_table.php)
 
 The operational heart of APPIKS. A student speaks (`sharings`) or asks for a meeting (`reports`); an external NLP service triages it (`nlp_analyses`); a counselor turns it into a session (`counselings`) and records the outcome under an immutable audit trail (`counseling_logs` + `counseling_log_histories`).
@@ -174,7 +174,7 @@ Creating a report is gated on mood: only allowed when the student's `last_mood` 
 | `type` | enum | no | `'internal'` | `internal` or `external` |
 | `resolution` | enum | yes | null | [`CounselingResolution`](../../../app/Enums/CounselingResolution.php). `'Perlu Rujukan Professional'` is the referral trigger. Cast to enum. |
 | `method` | enum | yes | null | [`CounselingMethod`](../../../app/Enums/CounselingMethod.php) |
-| `status` | enum | no | **`'dijadwalkan'`** | [`CounselingStatus`](../../../app/Enums/CounselingStatus.php). Cast to enum. Note the default is `dijadwalkan`, not `menunggu` — application code sets `menunggu` explicitly when it needs it. |
+| `status` | enum | no | **`'menunggu'`** | [`CounselingStatus`](../../../app/Enums/CounselingStatus.php) — **8 values**: `menunggu`, `menunggu_jadwal`, `menunggu_konfirmasi`, `dijadwalkan`, `dijadwal_ulang`, `selesai`, `ditolak`, `dibatalkan`. Cast to enum. Full lifecycle in [`08-state-machines.md`](../08-state-machines.md). |
 | `scheduled_at` | datetime | yes | null | Cast `datetime` |
 | `cutdown_at` | datetime | yes | null | Cast `datetime` |
 | `created_at`, `updated_at` | timestamp | yes | — | |

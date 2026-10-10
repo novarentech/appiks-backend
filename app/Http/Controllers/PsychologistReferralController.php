@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Actions\Psychologist\DecideReferralAction;
 use App\Actions\Psychologist\GetPendingReferralsAction;
 use App\Enums\BookingStatus;
-use App\Enums\CounselingStatus;
 use App\Http\Requests\DecideReferralRequest;
 use App\Http\Requests\GetPsychologistReferralsRequest;
 use App\Http\Resources\BookingScheduleResource;
@@ -24,7 +23,9 @@ class PsychologistReferralController extends Controller
     /**
      * Get psychologist referrals overview counts
      *
-     * Mendapatkan jumlah rujukan masuk berdasarkan status kondisi (pending, confirmed, selesai).
+     * Mendapatkan jumlah rujukan masuk per status booking. Tiga kunci teratas
+     * dipertahankan untuk kompatibilitas; `by_status` memuat seluruh nilai enum
+     * dengan zero-fill sehingga tidak ada status yang luput dari hitungan.
      *
      * @response array{
      *   success: true,
@@ -32,7 +33,9 @@ class PsychologistReferralController extends Controller
      *   data: array{
      *     pending: int,
      *     confirmed: int,
-     *     selesai: int
+     *     selesai: int,
+     *     by_status: array{pending: int, confirmed: int, rescheduled: int, rejected: int, expired: int, finished: int},
+     *     total: int
      *   }
      * }
      */
@@ -49,28 +52,25 @@ class PsychologistReferralController extends Controller
             $query->where('psychologist_id', $profile->id);
         });
 
-        $pending = (clone $baseQuery)
-            ->where('status', BookingStatus::PENDING->value)
-            ->count();
+        // Hitung per status dengan zero-fill dari enum, supaya tidak ada nilai
+        // yang luput dari hitungan saat enum bertambah.
+        $counts = (clone $baseQuery)
+            ->selectRaw('status, COUNT(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
 
-        $confirmed = (clone $baseQuery)
-            ->where('status', BookingStatus::CONFIRMED->value)
-            ->whereHas('counseling', function ($query) {
-                $query->where('status', '!=', CounselingStatus::SELESAI->value);
-            })
-            ->count();
-
-        $selesai = (clone $baseQuery)
-            ->where('status', BookingStatus::CONFIRMED->value)
-            ->whereHas('counseling', function ($query) {
-                $query->where('status', CounselingStatus::SELESAI->value);
-            })
-            ->count();
+        $byStatus = [];
+        foreach (BookingStatus::cases() as $case) {
+            $byStatus[$case->value] = (int) ($counts[$case->value] ?? 0);
+        }
 
         return $this->success([
-            'pending'   => $pending,
-            'confirmed' => $confirmed,
-            'selesai'   => $selesai,
+            // Tiga kunci lama dipertahankan agar frontend yang sudah ada tidak rusak.
+            'pending'   => $byStatus[BookingStatus::PENDING->value],
+            'confirmed' => $byStatus[BookingStatus::CONFIRMED->value],
+            'selesai'   => $byStatus[BookingStatus::FINISHED->value],
+            'by_status' => $byStatus,
+            'total'     => array_sum($byStatus),
         ], 'Ringkasan rujukan berhasil diambil.');
     }
 
@@ -174,17 +174,14 @@ class PsychologistReferralController extends Controller
             if (in_array($status, ['menunggu konfirmasi', 'menunggu_konfirmasi', 'pending'])) {
                 $query->where('status', BookingStatus::PENDING->value);
             } elseif (in_array($status, ['terkonfirmasi', 'confirmed'])) {
-                $query->where('status', BookingStatus::CONFIRMED->value)
-                    ->whereHas('counseling', function ($q) {
-                        $q->where('status', '!=', CounselingStatus::SELESAI->value);
-                    });
-            } elseif ($status === 'selesai') {
-                $query->where('status', BookingStatus::CONFIRMED->value)
-                    ->whereHas('counseling', function ($q) {
-                        $q->where('status', CounselingStatus::SELESAI->value);
-                    });
+                $query->where('status', BookingStatus::CONFIRMED->value);
+            } elseif (in_array($status, ['selesai', 'finished'])) {
+                // Sesi yang sudah ditutup psikolog lewat endpoint feedback.
+                $query->where('status', BookingStatus::FINISHED->value);
             } elseif (in_array($status, ['ditolak', 'rejected'])) {
                 $query->where('status', BookingStatus::REJECTED->value);
+            } elseif (in_array($status, ['dijadwal ulang', 'dijadwal_ulang', 'rescheduled'])) {
+                $query->where('status', BookingStatus::RESCHEDULED->value);
             } elseif (in_array($status, ['kadaluarsa', 'expired'])) {
                 $query->where(function ($q) {
                     $q->where('status', BookingStatus::EXPIRED->value)
@@ -193,6 +190,10 @@ class PsychologistReferralController extends Controller
                                 ->where('deadline_at', '<=', now());
                         });
                 });
+            } else {
+                // Status tidak dikenal: kembalikan kosong, jangan diam-diam
+                // mengembalikan seluruh daftar.
+                $query->whereRaw('1 = 0');
             }
         }
 
@@ -253,7 +254,9 @@ class PsychologistReferralController extends Controller
     /**
      * Decide on an incoming referral schedule.
      *
-     * Confirm or reject a pending student booking schedule referral.
+     * `confirm` menerima jadwal yang diajukan siswa, `reschedule` menggesernya ke
+     * slot lain (bersifat auto-setuju — siswa hanya diinformasikan), dan `reject`
+     * menolak rujukannya sehingga siswa kembali ke tahap memilih jadwal.
      */
     #[Group('Psychologist')]
     public function decide(DecideReferralRequest $request, BookingSchedule $booking, DecideReferralAction $action): JsonResponse
@@ -262,9 +265,12 @@ class PsychologistReferralController extends Controller
 
         $result = $action->handle($booking, $request->validated());
 
-        $message = $request->action === 'confirm' 
-            ? 'Rujukan berhasil dikonfirmasi.' 
-            : 'Rujukan telah dijadwalkan ulang.';
+        $message = match ($request->action) {
+            'confirm'    => 'Rujukan berhasil dikonfirmasi.',
+            'reschedule' => 'Rujukan telah dijadwalkan ulang.',
+            'reject'     => 'Rujukan telah ditolak.',
+            default      => 'Keputusan rujukan tersimpan.',
+        };
 
         return $this->success(new BookingScheduleResource($result), $message);
     }

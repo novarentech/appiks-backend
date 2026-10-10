@@ -1,10 +1,10 @@
 # API Surface
 
-<!-- verified: branch=dev commit=266f860 date=2026-10-09 scope=routes/api.php,routes/web.php,app/Http/Controllers -->
-> **Verified against:** `dev` @ `266f860` · 2026-10-09 — generated from `php artisan route:list --json`
+<!-- verified: branch=dev commit=working-tree date=2026-10-10 scope=routes/api.php,routes/web.php,app/Http/Controllers -->
+> **Verified against:** `dev` working tree · 2026-10-10 — generated from `php artisan route:list --json`
 > **Sources:** [`routes/api.php`](../../routes/api.php) · [`routes/web.php`](../../routes/web.php) · [`app/Http/Controllers/`](../../app/Http/Controllers/) (26 controllers)
 
-**162 routes total: 155 under `/api`, 7 elsewhere.** Exactly two middleware contexts exist — public, and `auth:api`. **No route carries a role check**; see [`03-authorization.md`](03-authorization.md) for where role decisions actually live.
+**164 routes total: 157 under `/api`, 7 elsewhere.** Exactly two middleware contexts exist — public, and `auth:api`. **No route carries a role check**; see [`03-authorization.md`](03-authorization.md) for where role decisions actually live.
 
 > **Non-goal: this document does not describe request or response bodies.** Those are generated at runtime by Dedoc Scramble and are always current:
 > - `GET /docs` — browsable UI with Try-It
@@ -192,7 +192,9 @@ See [`08-state-machines.md`](08-state-machines.md) for why four of these are unr
 | GET | `api/counseling/{counseling}` | `@show` | **NONE** | ⚠️ any authenticated user, any id |
 | POST | `api/counseling-logs` | `@storeLog` | `Policy::storeLog` | assigned counselor |
 | POST | `api/counseling/{counseling}/consent` | `@sendConsent` | `Policy::storeLog` | assigned counselor |
-| PATCH | `api/student/counselings/{counseling}/acknowledge` | `@acknowledge` | **NONE** | ⚠️ any authenticated user, any id |
+| PATCH | `api/counseling/{counseling}/cancel` | `@cancel` | `Policy::manageSchedule` | assigned counselor — status must not be terminal |
+| PATCH | `api/counseling/{counseling}/repropose` | `@repropose` | `Policy::manageSchedule` | assigned counselor — status must be `ditolak` |
+| PATCH | `api/student/counselings/{counseling}/acknowledge` | `@acknowledge` | `Policy::acknowledge` | the counseling's student, while it is awaiting their response |
 
 ## Student app surface
 
@@ -217,7 +219,7 @@ See [`08-state-machines.md`](08-state-machines.md) for why four of these are unr
 | GET | `api/psychologist/referrals` | `PsychologistReferralController@index` | `abort` — filters `search`, `status`, `priority`, `batas_waktu`, `per_page` |
 | GET | `api/psychologist/referrals-overview` | `@overview` | `abort` |
 | GET | `api/psychologist/referrals/pending` | `@pending` | `abort` |
-| PATCH | `api/psychologist/referrals/{booking}/decide` | `@decide` | `Policy::decide` — `action` ∈ `confirm` \| `reschedule` |
+| PATCH | `api/psychologist/referrals/{booking}/decide` | `@decide` | `Policy::decide` — `action` ∈ `confirm` \| `reschedule` \| `reject` |
 | GET | `api/psychologist/referrals/{counseling}/summary` | `PsychologistSummaryController@getSummary` | `abort` + assigned + consent granted |
 | POST | `api/psychologist/referrals/{counseling}/feedback` | `@storeFeedback` | same |
 | GET | `api/psychologist/recap/{counseling}/monthly/mood` | `@getMoodMonthlyRecap` | consent scope `mood_history` |
@@ -284,6 +286,42 @@ See [`08-state-machines.md`](08-state-machines.md) for why four of these are unr
 | GET | `api/quote/daily` | `@getDaily` | — |
 
 There is no `PATCH`/`PUT` route for quotes — they can only be created and deleted.
+
+---
+
+## Counseling payload: how the frontend learns a booking expired
+
+`CounselingResource` returns a `latest_booking` object alongside the counseling, so one call to `GET /api/counseling?type=external` (or `GET /api/student/counselings`) is enough to render every card in the design, including `Konseling Terlewat` with its **Pilih Jadwal Baru** button.
+
+```json
+{
+  "id": 24,
+  "type": "external",
+  "status": "menunggu_jadwal",
+  "room": "Puskesmas Jetis",
+  "slot": { "id": 44, "slot_date": "...", "slot_start_time": "09:00" },
+  "latest_booking": {
+    "id": 88,
+    "status": "expired",
+    "deadline_at": "2026-10-09T02:00:00+07:00",
+    "reject_reason": null,
+    "location": null,
+    "is_expired": true,
+    "was_rescheduled": false
+  }
+}
+```
+
+Two fields are derived so the client does not reimplement the rules:
+
+- **`is_expired`** — `status = expired`, **or** `status = pending` with `deadline_at` in the past. The second branch matters because `referrals:expire-pending` only runs every 15 minutes, so there is a window where the row still reads `pending`.
+- **`was_rescheduled`** — an earlier booking on the same counseling is `rescheduled`. This is the source of the design's **Perubahan Jadwal** badge; reschedule is auto-approved and therefore has no counseling-level status.
+
+`deadline_at` is serialized in `Asia/Jakarta` (`+07:00`), matching `StudentBookingController`, not the UTC form the default cast would produce.
+
+Collection endpoints add `withCount(['bookingSchedule as rescheduled_bookings_count' => …])` so `was_rescheduled` costs no extra query per row. `latest_booking` only appears when `latestBookingSchedule` is eager-loaded.
+
+Status-to-badge mapping is in [`12-ui-contract.md`](12-ui-contract.md).
 
 ---
 

@@ -3,6 +3,7 @@
 namespace App\Actions;
 
 use App\Enums\ConsentStatus;
+use App\Enums\CounselingStatus;
 use App\Models\CounselingConsent;
 
 class UpdateConsentAction
@@ -31,6 +32,34 @@ class UpdateConsentAction
             $consent->save();
         }
 
+        $this->syncCounselingStatus($consent, $isGranted);
+
         return $consent;
+    }
+
+    /**
+     * Persetujuan data adalah gerbang pertama sebuah rujukan: begitu siswa
+     * menyetujui, ia berpindah ke tahap memilih jadwal; begitu siswa menolak,
+     * rujukannya berhenti.
+     */
+    private function syncCounselingStatus(CounselingConsent $consent, bool $isGranted): void
+    {
+        $counseling = $consent->counseling;
+
+        if (! $counseling || $counseling->status->isTerminal()) {
+            return;
+        }
+
+        if (! $isGranted) {
+            $counseling->update(['status' => CounselingStatus::DITOLAK->value]);
+
+            return;
+        }
+
+        // Hanya rujukan eksternal yang memerlukan pemilihan jadwal oleh siswa.
+        // Konseling internal jadwalnya sudah ditentukan Guru BK sejak awal.
+        if ($counseling->type === 'external') {
+            $counseling->update(['status' => CounselingStatus::MENUNGGU_JADWAL->value]);
+        }
     }
 }

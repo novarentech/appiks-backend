@@ -1,7 +1,7 @@
 # 04 · Referral & Consent
 
-<!-- verified: branch=dev commit=266f860 date=2026-10-09 scope=database/migrations,app/Models,app/Services/ReferralPayloadBuilder.php,app/Console/Commands -->
-> **Verified against:** `dev` @ `266f860` · 2026-10-09
+<!-- verified: branch=dev commit=working-tree date=2026-10-10 scope=database/migrations,app/Models,app/Services/ReferralPayloadBuilder.php,app/Console/Commands -->
+> **Verified against:** `dev` working tree · 2026-10-10
 > **Sources:** [`2026_06_12_130000_create_counseling_consents_table.php`](../../../database/migrations/2026_06_12_130000_create_counseling_consents_table.php) · [`2026_06_12_130001_create_clinical_summaries_table.php`](../../../database/migrations/2026_06_12_130001_create_clinical_summaries_table.php) · [`2026_07_18_000001_create_psychologist_slots_table.php`](../../../database/migrations/2026_07_18_000001_create_psychologist_slots_table.php) · [`2026_07_18_000002_create_booking_schedules_table.php`](../../../database/migrations/2026_07_18_000002_create_booking_schedules_table.php)
 
 What happens when a counselor decides a case needs an external professional. This slice carries the system's **privacy boundary**: nothing crosses from the school to the partner psychologist without an explicit, scoped grant from the student.
@@ -162,7 +162,7 @@ Then, **only for granted scopes**: `mood_distribution_30d` with streak figures; 
 
 **Relations** — [`PsychologistSlot`](../../../app/Models/PsychologistSlot.php): `psychologistProfile()`, `bookingSchedule()` (`hasOne`). Scopes: `available()`, `upcoming()` (`slot_date >= today`).
 
-Slot status tracks reservation, not the session: `available` → `tentative` (a booking is pending on it) → `confirmed` (the psychologist accepted). An expired booking reverts the slot to `available`.
+Slot status tracks reservation, not the session: `available` → `tentative` (a booking is pending on it) → `confirmed` (the psychologist accepted). An expired or rejected booking reverts the slot to `available`. `tentative` is written by [`CreateBookingScheduleAction`](../../../app/Actions/CreateBookingScheduleAction.php) — together with `BookingStatus::holdsSlotValues()` it is what stops two students claiming the same hour.
 
 ## `booking_schedules`
 
@@ -172,7 +172,7 @@ Slot status tracks reservation, not the session: `available` → `tentative` (a 
 | `counseling_id` | bigint FK | no | — | → `counselings.id`, cascade |
 | `slot_id` | bigint FK | no | — | → `psychologist_slots.id`, cascade |
 | `student_id` | bigint FK | no | — | → `users.id`, cascade |
-| `status` | enum | no | `'pending'` | [`BookingStatus`](../../../app/Enums/BookingStatus.php). Cast to enum. |
+| `status` | enum | no | `'pending'` | [`BookingStatus`](../../../app/Enums/BookingStatus.php) — **6 values**: `pending`, `confirmed`, `rescheduled`, `rejected`, `expired`, `finished`. Cast to enum. |
 | `reject_reason` | text | yes | null | Filled when the psychologist proposes a different time |
 | `deadline_at` | datetime | no | — | **Not nullable.** `now() + 24 hours` at creation. Cast `datetime`. |
 | `location` | string | yes | null | Derived from the psychologist's `institution_name` on confirmation |
@@ -194,6 +194,8 @@ Slot status tracks reservation, not the session: `available` → `tentative` (a 
 
 **Confirmation triggers the AI summary.** `PATCH /api/psychologist/referrals/{booking}/decide` with `action = confirm` dispatches [`GenerateGeminiReferralSummaryJob`](../../../app/Jobs/GenerateGeminiReferralSummaryJob.php), which hard-aborts unless `latestConsent->status === ConsentStatus::GRANTED`.
 
-> **`[GAP]`** With `action = reschedule`, the action rejects the original booking and force-creates a **new booking already marked `confirmed`** on a slot the psychologist chose — the student never re-approves it. The Figma design shows a two-way flow where the student accepts or declines the proposed change. The backend does not implement that handshake.
+**`action = reschedule`** marks the original booking `rescheduled` (not `rejected`), releases its slot, and creates a replacement booking already `confirmed` on the slot the psychologist chose, with the session time as its `deadline_at`. **This is deliberate**: the product rule is auto-approval — the student is informed, not asked. The design screen `Psikolog mengajukan perubahan jadwal` (`#5609:39677`) carries no accept/decline button, only "Lihat Detail", which confirms it.
+
+**`action = reject`** declines the referral outright: booking `rejected` with a reason, slot released, and the counseling returns to `menunggu_jadwal` so the student can choose another time. This is the only writer of `rejected`; before the state machine was reworked, `rejected` was produced as a side effect of rescheduling, which made the "Ditolak" filter show moved appointments.
 
 **Closing the loop.** `POST /api/psychologist/referrals/{counseling}/feedback` sets booking → `finished`, counseling → `selesai`, and the linked sharing → `Diselesaikan`, while saving the psychologist's notes and rating onto `clinical_summaries`.

@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\BookingStatus;
 use App\Enums\ConsentStatus;
 use App\Enums\CounselingStatus;
+use App\Http\Resources\CounselingResource;
 use App\Models\Counseling;
 use App\Models\CounselingConsent;
 use App\Traits\ApiResponder;
@@ -25,7 +27,7 @@ class StudentDashboardController extends Controller
         $studentId = auth()->id();
 
         $activeCount = Counseling::where('student_id', $studentId)
-            ->whereIn('status', [CounselingStatus::DIJADWALKAN, CounselingStatus::MENUNGGU])
+            ->whereIn('status', CounselingStatus::activeValues())
             ->count();
 
         $completedCount = Counseling::where('student_id', $studentId)
@@ -59,16 +61,28 @@ class StudentDashboardController extends Controller
             ->with([
                 'counselor',
                 'psychologist.psychologistProfile',
-                'latestConsent'
+                'latestConsent',
+                'latestBookingSchedule.slot',
             ])
+            ->withCount(['bookingSchedule as rescheduled_bookings_count' => function ($query) {
+                $query->where('status', BookingStatus::RESCHEDULED->value);
+            }])
             ->latest();
 
+        // Pagination-with-flat-array-fallback, sesuai agent/RULE_OF_ARCHITECT.md §4.
+        // Bentuk paginasinya mengikuti PsychologistReferralController: {data, links, meta}.
         if ($request->has('page') || $request->has('search')) {
             $counselings = $query->paginate($request->input('per_page', 10));
-        } else {
-            $counselings = $query->get();
+
+            return $this->success(
+                CounselingResource::collection($counselings)->response()->getData(true),
+                'Student counseling list retrieved.'
+            );
         }
 
-        return $this->success($counselings, 'Student counseling list retrieved.');
+        return $this->success(
+            CounselingResource::collection($query->get()),
+            'Student counseling list retrieved.'
+        );
     }
 }

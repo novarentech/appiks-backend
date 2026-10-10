@@ -1,7 +1,7 @@
 # UI Contract — Figma ↔ Backend
 
-<!-- verified: branch=dev commit=266f860 date=2026-10-09 scope=app/Enums,Figma file QIhkFbm9QlPweWuT7qIUyl -->
-> **Terverifikasi terhadap:** `dev` @ `266f860` · 2026-10-09
+<!-- verified: branch=dev commit=working-tree date=2026-10-10 scope=app/Enums,Figma file QIhkFbm9QlPweWuT7qIUyl -->
+> **Terverifikasi terhadap:** `dev` working tree · 2026-10-10
 > **Dua sumber:** sisi kode dari [`app/Enums/`](../../app/Enums/); sisi desain dari file Figma `QIhkFbm9QlPweWuT7qIUyl` ("lo-fi + hi-fi"), diambil lewat Figma MCP pada 2026-10-09.
 
 Jembatan antara nilai yang tersimpan di database dan apa yang dibaca pengguna di layar. Dibutuhkan karena nilai enum di backend **bukan** copy UI — kadang mirip, kadang berbeda, dan beberapa label di desain tidak punya padanan sama sekali.
@@ -137,7 +137,7 @@ Status consent di UI: `Persetujuan Berhasil` (dengan auto-redirect *"Otomatis di
 
 Legend di screen `Kelola Jadwal Konsultasi #5499:8802` persis bertuliskan `Status Slot: Tersedia | Menunggu Konfirmasi | Terkonfirmasi`, plus statistik `Terkonfirmasi 3 | Menunggu Konfirmasi 2 | Slot Tersedia 3`.
 
-> Penting: desain mengasumsikan `tentative` dipakai, padahal di backend **tidak pernah ditulis oleh kode aplikasi** (hanya oleh seeder). Lihat [`08-state-machines.md`](08-state-machines.md). Layar ini akan menampilkan slot sebagai "Tersedia" padahal sudah ada booking pending.
+> Ketiga nilai ini sekarang benar-benar dipakai backend: `tentative` ditulis saat siswa mengajukan booking, dan dilepas kembali ke `available` bila booking kadaluarsa atau ditolak. Jadi label di layar Kelola Jadwal mencerminkan keadaan sebenarnya.
 
 ### `BookingStatus`
 
@@ -145,9 +145,31 @@ Legend di screen `Kelola Jadwal Konsultasi #5499:8802` persis bertuliskan `Statu
 |---|---|
 | `pending` | `MENUNGGU KONFIRMASI` · `Menunggu Konfirmasi Psikolog` |
 | `confirmed` | `Terkonfirmasi` |
-| `rejected` | `Perubahan Jadwal Diajukan` — bukan "ditolak"; desain membingkainya sebagai usulan jadwal baru |
+| `rescheduled` | `Perubahan Jadwal` / `Perubahan Jadwal Diajukan` — booking lama yang digeser psikolog |
+| `rejected` | `Ditolak` — psikolog menolak rujukannya (lewat `action=reject`) |
 | `expired` | *"Batas waktu rujukan telah berakhir. Silakan ajukan ulang untuk memilih jadwal konsultasi yang baru."* |
 | `finished` | `Rujukan selesai` |
+
+### `CounselingStatus` → badge
+
+Delapan nilai, dipetakan ke badge desain. Beberapa badge butuh gabungan dengan `latest_booking`.
+
+| Kondisi | Badge desain |
+|---|---|
+| `menunggu`, `type = external` | `Butuh Persetujuan` |
+| `menunggu`, `type = internal` | `Menunggu Persetujuan` |
+| `menunggu_jadwal` | `Pilih Jadwal` — atau **`Kedaluwarsa`** bila `latest_booking.is_expired` |
+| `menunggu_konfirmasi` | `Menunggu Konfirmasi` |
+| `dijadwalkan` + `latest_booking.was_rescheduled` | `Perubahan Jadwal` |
+| `dijadwalkan` | `Terkonfirmasi` · `Dijadwalin` |
+| `dijadwal_ulang` | `Dijadwal Ulang` |
+| `selesai` | `Selesai` |
+| `ditolak` | `Jadwal Ditolak Siswa` |
+| `dibatalkan` | `Dibatalkan` |
+
+Dua badge desain yang **bukan** status melainkan turunan: `Kedaluwarsa` (dari `latest_booking.is_expired`) dan `Perubahan Jadwal` (dari `latest_booking.was_rescheduled`). Ini mengikuti cara desainer memperlakukan `BATAS WAKTU` sebagai dimensi terpisah. Kontrak lengkapnya di [`09-api-surface.md`](09-api-surface.md).
+
+Setelah kadaluarsa, desain memberi siswa tombol **"Pilih Jadwal Baru"** (`#5609:40491`) — bukan mengajukan rujukan baru. Backend mengikuti ini: rujukannya tetap hidup dan kembali ke `menunggu_jadwal`.
 
 ### `SharingAction` dan keputusan tindak lanjut BK
 
@@ -221,7 +243,6 @@ Filter & tabel umum: `Cari...`, `Cari nama siswa...`, `Pilih Kelas`, `Pilih Pera
 | Mood `Takut` | 5 opsi mood | `MoodStatus` hanya 4 nilai |
 | 4 aktivitas self-help tambahan | Latihan Pernapasan, Pelukan Kupu-Kupu, Aktivitas Fisik (timer 10/15/20 Menit, Atur/Ulang/Mulai/Jeda), Afirmasi Diri — dikategorikan Emotional / Mindfulness / Physical | `self_helps.type` hanya 4 nilai. Konsisten, tab "Riwayat Self Help" Guru Wali juga hanya menampilkan 4 |
 | **Konfirmasi orang tua/wali** | "Orang tua/wali siswa telah dihubungi dan menyetujui proses pengajuan rujukan konseling." — pernyataan wajib sebelum rujukan | Tidak ada kolom, tabel, atau endpoint. Tidak ada aktor orang tua |
-| **Reschedule dua arah** | "Psikolog mengajukan perubahan jadwal" `#5609:39677` → siswa menyetujui/menolak; "Ajukan Perubahan Jadwal", "Perubahan Jadwal Diajukan" | `DecideReferralAction` membuat booking baru langsung `confirmed`, tanpa persetujuan ulang siswa |
 | **Superadmin "Kelola API"** | `#2727:50076` — "API Key / Token", nilai, status "Aktif" | Tabel `gemini_api_token` **sudah ada** dan dirotasi otomatis, tapi tidak ada endpoint CRUD. Ini kemungkinan UI untuk tabel itu |
 | Feedback kebermanfaatan artikel | `#1654:26637` — "Apakah artikel ini bermanfaat? | Bermanfaat | Tidak" | Tidak ada tabel atau endpoint |
 | Dark Mode | Toggle di top nav siswa | Tidak relevan bagi backend (preferensi klien), tapi tidak ada tempat menyimpannya per user |

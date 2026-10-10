@@ -15,6 +15,20 @@ class GetPsychologistReferralsRequest extends FormRequest
     }
 
     /**
+     * Aturan `in:` bersifat case-sensitive sementara controller menormalkan
+     * dengan strtolower, sehingga "Menunggu Konfirmasi" dulu ditolak 422.
+     * Normalkan di sini supaya keduanya sepakat.
+     */
+    protected function prepareForValidation(): void
+    {
+        foreach (['status', 'priority', 'batas_waktu'] as $key) {
+            if ($this->filled($key) && is_string($this->input($key))) {
+                $this->merge([$key => strtolower(trim($this->input($key)))]);
+            }
+        }
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
@@ -32,7 +46,16 @@ class GetPsychologistReferralsRequest extends FormRequest
              * Filter status rujukan.
              * @example menunggu konfirmasi
              */
-            'status' => ['nullable', 'string', 'in:menunggu konfirmasi,terkonfirmasi,selesai,ditolak,kadaluarsa'],
+            'status' => [
+                'nullable',
+                'string',
+                'in:menunggu konfirmasi,menunggu_konfirmasi,pending,'
+                .'terkonfirmasi,confirmed,'
+                .'selesai,finished,'
+                .'ditolak,rejected,'
+                .'dijadwal ulang,dijadwal_ulang,rescheduled,'
+                .'kadaluarsa,expired',
+            ],
 
             /**
              * Filter prioritas rujukan.

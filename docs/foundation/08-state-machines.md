@@ -1,7 +1,7 @@
 # State Machines
 
-<!-- verified: branch=dev commit=266f860 date=2026-10-09 scope=app/Enums,app/Http/Controllers,app/Actions,app/Jobs,app/Observers,app/Console/Commands,app/Http/Requests -->
-> **Verified against:** `dev` @ `266f860` · 2026-10-09
+<!-- verified: branch=dev commit=working-tree date=2026-10-10 scope=app/Enums,app/Http/Controllers,app/Actions,app/Jobs,app/Observers,app/Console/Commands,app/Http/Requests -->
+> **Verified against:** `dev` working tree · 2026-10-10 (counseling & booking state machines reworked)
 > **Sources:** [`app/Enums/`](../../app/Enums/) · every write site found with `grep -rn "ReportStatus::\|CounselingStatus::\|ConsentStatus::\|BookingStatus::\|SlotStatus::" app/`
 
 Six status enums govern the workflow. Each diagram below shows only transitions that **exist in code**; unreachable states and dead guards are called out explicitly.
@@ -120,32 +120,69 @@ stateDiagram-v2
 
 ## `CounselingStatus`
 
-[`CounselingStatus`](../../app/Enums/CounselingStatus.php): `dijadwalkan`, `menunggu`, `selesai`, `ditolak`. Cast to the enum on the model. **Column default is `dijadwalkan`.**
+[`CounselingStatus`](../../app/Enums/CounselingStatus.php) — **8 cases**, cast to the enum on the model. **Column default is `menunggu`.**
+
+| Case | Value | Meaning |
+|---|---|---|
+| `MENUNGGU` | `menunggu` | Created by the counselor; waiting on the student — schedule approval (internal) or data consent (external) |
+| `MENUNGGU_JADWAL` | `menunggu_jadwal` | Consent granted; the student must pick a slot. **Also the state a referral returns to after its booking expires or is rejected** |
+| `MENUNGGU_KONFIRMASI` | `menunggu_konfirmasi` | A booking was submitted; waiting on the psychologist |
+| `DIJADWALKAN` | `dijadwalkan` | Confirmed; the session is ready to run |
+| `DIJADWAL_ULANG` | `dijadwal_ulang` | The counselor re-proposed a schedule after the student rejected one; waiting on the student again |
+| `SELESAI` | `selesai` | Outcome recorded |
+| `DITOLAK` | `ditolak` | The student rejected the schedule, or rejected consent |
+| `DIBATALKAN` | `dibatalkan` | The counselor cancelled |
+
+Helpers on the enum, used instead of hardcoded allowlists: `isActive()`, `isTerminal()`, `needsStudentAction()`, `activeValues()`, `terminalValues()`.
+
+> **`dijadwal_ulang` is the internal path only.** On the psychologist path a reschedule is auto-approved, so the counseling goes straight to `dijadwalkan` and the "schedule was moved" trace lives at booking level as `BookingStatus::RESCHEDULED`. Using one value for both would make it ambiguous — "waiting on the student" internally versus "already scheduled" externally. It has exactly one meaning: **a new schedule has been proposed and the student must respond.**
 
 ```mermaid
-%% Source: app/Actions/ScheduleReportCounselingAction.php, app/Http/Controllers/CounselingController.php,
+%% Source: app/Http/Requests/CreateCounselingRequest.php, app/Actions/UpdateConsentAction.php,
+%% app/Actions/CreateBookingScheduleAction.php, app/Actions/Psychologist/DecideReferralAction.php,
+%% app/Console/Commands/ExpirePendingReferrals.php, app/Http/Controllers/CounselingController.php,
 %% app/Actions/StoreCounselingLogAction.php, app/Http/Controllers/PsychologistSummaryController.php
 stateDiagram-v2
-    [*] --> dijadwalkan : POST /api/counseling (column default)
-    [*] --> menunggu : POST report/{id}/schedule-meeting
-    menunggu --> dijadwalkan : student accepts
-    menunggu --> ditolak : student declines
-    dijadwalkan --> selesai : counseling log stored
-    dijadwalkan --> selesai : psychologist feedback
+    [*] --> menunggu : POST /api/counseling
+    menunggu --> dijadwalkan : internal, student accepts
+    menunggu --> ditolak : student rejects schedule or consent
+    menunggu --> menunggu_jadwal : external, consent granted
+    menunggu_jadwal --> menunggu_konfirmasi : student books a slot
+    menunggu_konfirmasi --> dijadwalkan : psychologist confirms
+    menunggu_konfirmasi --> dijadwalkan : psychologist reschedules (auto-approved)
+    menunggu_konfirmasi --> menunggu_jadwal : booking expires or is rejected
+    ditolak --> dijadwal_ulang : counselor re-proposes
+    dijadwal_ulang --> dijadwalkan : student accepts
+    dijadwal_ulang --> ditolak : student rejects again
+    dijadwalkan --> selesai : outcome recorded
+    menunggu --> dibatalkan : counselor cancels
+    menunggu_jadwal --> dibatalkan : counselor cancels
+    menunggu_konfirmasi --> dibatalkan : counselor cancels
+    dijadwalkan --> dibatalkan : counselor cancels
     selesai --> [*]
     ditolak --> [*]
+    dibatalkan --> [*]
 ```
 
-| From | To | Trigger | Actor | Side effects | Source |
-|---|---|---|---|---|---|
-| — | `dijadwalkan` | `POST /api/counseling` | counselor | Observer: pending consent if `type=external`; linked sharing → `Menunggu Persetujuan Siswa` | column default + [`CounselingObserver`](../../app/Observers/CounselingObserver.php) |
-| — | `menunggu` | `POST /api/report/{report}/schedule-meeting` | super/admin/headteacher/assigned counselor | Creates counseling with `source_type=nlp_incident`, `type=internal`; fires `CounselingScheduled` | [`ScheduleReportCounselingAction`](../../app/Actions/ScheduleReportCounselingAction.php) |
-| `menunggu` | `dijadwalkan` | acknowledge `accept` | student | Sharing → `Konseling Dijadwalkan` | [`CounselingController`](../../app/Http/Controllers/CounselingController.php) |
-| `menunggu` | `ditolak` | acknowledge `decline` | student | Sharing → `Jadwal Ditolak Siswa` | same |
-| any | `selesai` | `POST /api/counseling-logs` | assigned counselor | Writes `resolution` + `method`; closes linked report; creates `CounselingLog`; fires `CounselingLogStored` | [`StoreCounselingLogAction`](../../app/Actions/StoreCounselingLogAction.php) |
-| any | `selesai` | psychologist feedback | psychologist | Booking → `finished`, sharing → `Diselesaikan` | [`PsychologistSummaryController`](../../app/Http/Controllers/PsychologistSummaryController.php) |
+| From | To | Trigger | Actor | Guard | Side effects | Source |
+|---|---|---|---|---|---|---|
+| — | `menunggu` | `POST /api/counseling` | counselor | `CreateCounselingRequest` | Observer: pending consent if `type=external`; linked sharing → `Menunggu Persetujuan Siswa` | [`CreateCounselingRequest:61`](../../app/Http/Requests/CreateCounselingRequest.php) |
+| — | `menunggu` | `POST /api/report/{report}/schedule-meeting` | super/admin/headteacher/assigned counselor | `ReportPolicy::scheduleMeeting` | Creates counseling `type=internal`, `source_type=nlp_incident`; fires `CounselingScheduled` | [`ScheduleReportCounselingAction`](../../app/Actions/ScheduleReportCounselingAction.php) |
+| `menunggu` | `menunggu_jadwal` | `PATCH /api/student/consents/{consent}` granted | student | `CounselingConsentPolicy::update`; only when `type=external` | Consent `granted` + scopes | [`UpdateConsentAction`](../../app/Actions/UpdateConsentAction.php) |
+| any active | `ditolak` | same endpoint, rejected | student | same | Consent `rejected`, scopes nulled | same |
+| `menunggu_jadwal` | `menunggu_konfirmasi` | `POST /api/student/bookings` | student | own counseling, `type=external`, no live booking | Booking `pending` (+24h), **slot → `tentative`** | [`CreateBookingScheduleAction`](../../app/Actions/CreateBookingScheduleAction.php) |
+| `menunggu_konfirmasi` | `dijadwalkan` | `decide` `action=confirm` | psychologist | `BookingSchedulePolicy::decide`, booking must be `pending` | Booking + slot `confirmed`; AI summary job | [`DecideReferralAction`](../../app/Actions/Psychologist/DecideReferralAction.php) |
+| `menunggu_konfirmasi` | `dijadwalkan` | `decide` `action=reschedule` | psychologist | booking `pending` or `confirmed` | Old booking `rescheduled`, old slot released, new booking `confirmed`; AI summary job | same |
+| `menunggu_konfirmasi` | `menunggu_jadwal` | `referrals:expire-pending` | system | booking `pending` and past `deadline_at` | Booking `expired`, slot `available`; fires `BookingExpired` | [`ExpirePendingReferrals`](../../app/Console/Commands/ExpirePendingReferrals.php) |
+| `menunggu_konfirmasi` | `menunggu_jadwal` | `decide` `action=reject` | psychologist | booking must be `pending` | Booking `rejected` + reason, slot released | [`DecideReferralAction`](../../app/Actions/Psychologist/DecideReferralAction.php) |
+| `menunggu` / `dijadwal_ulang` | `dijadwalkan` | `PATCH /api/student/counselings/{counseling}/acknowledge` `accept` | student | `CounselingPolicy::acknowledge` + `needsStudentAction()` | Sharing → `Konseling Dijadwalkan` | [`CounselingController`](../../app/Http/Controllers/CounselingController.php) |
+| `menunggu` / `dijadwal_ulang` | `ditolak` | same, `decline` | student | same | Sharing → `Jadwal Ditolak Siswa` | same |
+| `ditolak` | `dijadwal_ulang` | `PATCH /api/counseling/{counseling}/repropose` | assigned counselor | `CounselingPolicy::manageSchedule`, status must be `ditolak` | New `scheduled_at`; sharing → `Menunggu Persetujuan Siswa` | same |
+| any active | `dibatalkan` | `PATCH /api/counseling/{counseling}/cancel` | assigned counselor | `CounselingPolicy::manageSchedule`, status must not be terminal | Sharing → `Dibatalkan` | same |
+| `dijadwalkan` | `selesai` | `POST /api/counseling-logs` | assigned counselor | `CounselingPolicy::storeLog` | Writes `resolution` + `method`; closes linked report; creates `CounselingLog`; fires `CounselingLogStored` | [`StoreCounselingLogAction`](../../app/Actions/StoreCounselingLogAction.php) |
+| `dijadwalkan` | `selesai` | `POST /api/psychologist/referrals/{counseling}/feedback` | psychologist | assigned + booking `confirmed`/`finished` | Booking → `finished`, sharing → `Diselesaikan` | [`PsychologistSummaryController`](../../app/Http/Controllers/PsychologistSummaryController.php) |
 
-Note the two creation paths disagree: a counselor-created counseling starts at `dijadwalkan` (the column default, with nothing setting it explicitly), while a report-scheduled one starts at `menunggu` and therefore waits for the student. A referral created directly via `POST /api/counseling` is already `dijadwalkan` even though its consent is still `pending`.
+Transitions out of a terminal status are blocked in code: `UpdateConsentAction` and `ExpirePendingReferrals` check `isTerminal()` / `isActive()` first, and `cancel` refuses a closed session.
 
 ---
 
@@ -178,18 +215,32 @@ Transitions out of `granted` or `rejected` are not blocked in code; `UpdateConse
 
 ## `BookingStatus`
 
-[`BookingStatus`](../../app/Enums/BookingStatus.php): `pending`, `finished`, `confirmed`, `rejected`, `expired`. Cast to the enum.
+[`BookingStatus`](../../app/Enums/BookingStatus.php) — **6 cases**, cast to the enum. The five original values map 1:1 onto the designer's `STATUS RUJUKAN` annotation (Figma `#5499:12621`); `rescheduled` was added so that a moved appointment is no longer recorded as a rejection.
+
+| Case | Value | Meaning |
+|---|---|---|
+| `PENDING` | `pending` | Submitted by the student; the psychologist has 24 hours to respond |
+| `CONFIRMED` | `confirmed` | Accepted; the session will run |
+| `RESCHEDULED` | `rescheduled` | The psychologist moved this appointment. A replacement booking is created already `confirmed` — reschedule is auto-approved, the student is only informed |
+| `REJECTED` | `rejected` | The psychologist declined the referral outright |
+| `EXPIRED` | `expired` | The 24-hour window elapsed without a decision |
+| `FINISHED` | `finished` | The psychologist recorded the outcome |
+
+Helpers: `holdsSlot()` / `holdsSlotValues()` (`pending`, `confirmed`, `finished` — these reserve the slot) and `isActionable()` / `actionableValues()` (`confirmed`, `finished` — these grant the psychologist access to clinical data).
 
 ```mermaid
 %% Source: app/Actions/CreateBookingScheduleAction.php, app/Actions/Psychologist/DecideReferralAction.php,
 %% app/Console/Commands/ExpirePendingReferrals.php, app/Http/Controllers/PsychologistSummaryController.php
 stateDiagram-v2
-    [*] --> pending : POST /api/student/bookings (deadline +24h)
-    [*] --> confirmed : psychologist reschedule creates a new booking
+    [*] --> pending : POST /api/student/bookings
+    [*] --> confirmed : replacement booking from a reschedule
     pending --> confirmed : decide action=confirm
-    pending --> rejected : decide action=reschedule
-    pending --> expired : referrals:expire-pending (every 15 min)
-    confirmed --> finished : psychologist feedback
+    pending --> rescheduled : decide action=reschedule
+    pending --> rejected : decide action=reject
+    pending --> expired : referrals:expire-pending
+    confirmed --> rescheduled : decide action=reschedule
+    confirmed --> finished : psychologist records the outcome
+    rescheduled --> [*]
     rejected --> [*]
     expired --> [*]
     finished --> [*]
@@ -197,15 +248,16 @@ stateDiagram-v2
 
 | From | To | Trigger | Actor | Guard | Side effects |
 |---|---|---|---|---|---|
-| — | `pending` | `POST /api/student/bookings` | student | own counseling, `type=external` | `lockForUpdate()` on the slot; `deadline_at = now()+24h`; fires `BookingScheduleCreated` |
-| `pending` | `confirmed` | `PATCH /api/psychologist/referrals/{booking}/decide` `action=confirm` | psychologist | `BookingSchedulePolicy::decide` **and** `status === pending` | Slot → `confirmed`; dispatches `GenerateGeminiReferralSummaryJob` |
-| `pending` | `rejected` | same, `action=reschedule` | psychologist | `decide` | Writes `reject_reason`; then **creates a new booking already `confirmed`** on the psychologist's chosen slot, with `deadline_at = now()-2 days` |
-| `pending` | `expired` | `php artisan referrals:expire-pending` | system | `deadline_at <= now()` | Slot reverted to `available`; fires `BookingExpired` |
-| `confirmed` | `finished` | `POST /api/psychologist/referrals/{counseling}/feedback` | psychologist | assigned + confirmed booking | Counseling → `selesai`, sharing → `Diselesaikan`, saves notes + rating |
+| — | `pending` | `POST /api/student/bookings` | student | own counseling, `type=external`, **no booking already holding a slot** | `lockForUpdate()` on the slot; `deadline_at = now()+24h`; slot → `tentative`; counseling → `menunggu_konfirmasi`; fires `BookingScheduleCreated` |
+| `pending` | `confirmed` | `decide` `action=confirm` | psychologist | `BookingSchedulePolicy::decide` **and** status `pending` | Slot → `confirmed`; counseling → `dijadwalkan`; dispatches `GenerateGeminiReferralSummaryJob` |
+| `pending` / `confirmed` | `rescheduled` | `decide` `action=reschedule` | psychologist | `decide`, status `pending` or `confirmed`, `slot_id` + reason required | Writes `reject_reason`; old slot → `available`; a **new booking is created already `confirmed`** on the chosen slot with the session time as its `deadline_at`; counseling → `dijadwalkan`; AI summary job dispatched |
+| `pending` | `rejected` | `decide` `action=reject` | psychologist | `decide`, status `pending`, reason required | Slot → `available`; counseling → `menunggu_jadwal` so the student can choose again |
+| `pending` | `expired` | `php artisan referrals:expire-pending` | system | `deadline_at <= now()` | Slot → `available`; counseling → `menunggu_jadwal`; fires `BookingExpired` (**no listener**) |
+| `confirmed` | `finished` | `POST /api/psychologist/referrals/{counseling}/feedback` | psychologist | assigned + booking `confirmed`/`finished` | Counseling → `selesai`, sharing → `Diselesaikan`; saves notes + rating |
 
-> **`[GAP]`** The reschedule path bypasses the student entirely — the replacement booking is created as `confirmed`, so the student never approves the new time. Its `deadline_at` is set to `now() - 2 days`, i.e. deliberately in the past so the expiry job skips it (the job only looks at `pending` rows anyway). The design specifies a two-way handshake; the backend does not implement one.
->
-> `BookingScheduleCreated` and `BookingExpired` are dispatched but have **no listeners**, so neither creation nor expiry notifies anyone.
+**Reschedule is deliberately one-way.** The product rule is auto-approval: the student is informed, not asked. The design's `Perubahan Jadwal` badge has no counterpart in `BookingStatus` because it is derived — the latest booking is `confirmed` **and** an earlier booking on the same counseling is `rescheduled`. The API exposes that as `latest_booking.was_rescheduled`; see [`09-api-surface.md`](09-api-surface.md).
+
+**Expiry is both a status and a derived flag.** The scheduled command runs every 15 minutes, so there is a window in which a booking is past `deadline_at` but still reads `pending`. The API therefore also returns `latest_booking.is_expired`, computed as `status = expired` **or** (`status = pending` and `deadline_at` has passed). This mirrors how the designer treats `BATAS WAKTU` (Figma `#5499:12648`) as a dimension separate from status.
 
 ---
 
@@ -214,25 +266,28 @@ stateDiagram-v2
 [`SlotStatus`](../../app/Enums/SlotStatus.php): `available`, `tentative`, `confirmed`. Cast to the enum.
 
 ```mermaid
-%% Source: app/Actions/Psychologist/CreatePsychologistSlotAction.php,
+%% Source: app/Actions/Psychologist/CreatePsychologistSlotAction.php, app/Actions/CreateBookingScheduleAction.php,
 %% app/Actions/Psychologist/DecideReferralAction.php, app/Console/Commands/ExpirePendingReferrals.php
 stateDiagram-v2
     [*] --> available : POST /api/psychologist/slots
-    available --> confirmed : booking confirmed
-    confirmed --> available : booking expired
-    state "tentative — never set by application code" as tentative
-    available --> [*] : DELETE (only while available)
+    available --> tentative : student books it (booking pending)
+    tentative --> confirmed : psychologist confirms
+    tentative --> available : booking expires or is rejected
+    available --> confirmed : replacement booking from a reschedule
+    confirmed --> available : psychologist reschedules away from it
+    available --> [*] : DELETE (only while unbooked)
 ```
 
 | From | To | Trigger | Source |
 |---|---|---|---|
 | — | `available` | `POST /api/psychologist/slots` (optionally repeating weekly for up to a year) | [`CreatePsychologistSlotAction`](../../app/Actions/Psychologist/CreatePsychologistSlotAction.php) |
-| `available` | `confirmed` | psychologist confirms a booking on it | [`DecideReferralAction`](../../app/Actions/Psychologist/DecideReferralAction.php) |
-| `confirmed` | `available` | the booking expires | [`ExpirePendingReferrals`](../../app/Console/Commands/ExpirePendingReferrals.php) |
+| `available` | `tentative` | a student submits a booking on it | [`CreateBookingScheduleAction`](../../app/Actions/CreateBookingScheduleAction.php) |
+| `tentative` | `confirmed` | psychologist confirms the booking | [`DecideReferralAction`](../../app/Actions/Psychologist/DecideReferralAction.php) |
+| `tentative` | `available` | the booking expires, or the psychologist rejects it | [`ExpirePendingReferrals`](../../app/Console/Commands/ExpirePendingReferrals.php) · `DecideReferralAction` |
+| `available` | `confirmed` | the replacement slot chosen during a reschedule | `DecideReferralAction` |
+| `confirmed` | `available` | the psychologist reschedules away from this slot | same |
 
-> **`[DEAD]` — `tentative` is never written by application code.** The only writes are in [`ReferralFlowSeeder`](../../database/seeders/ReferralFlowSeeder.php) (lines 255 and 321). [`CreateBookingScheduleAction`](../../app/Actions/CreateBookingScheduleAction.php) locks the slot and creates the booking but **does not change the slot's status**, so a slot with a pending booking stays `available`.
->
-> This does not cause double-booking, because `GetAvailableDatesAction` and `GetAvailableSlotsAction` exclude slots that already have a `pending` or `confirmed` booking. But it does mean **slot status alone is not a reliable indicator of availability** — you must check for an associated booking. Code or UI that filters on `status = available` will show slots that are already claimed. The seeded demo data, which does set `tentative`, therefore does not match what the running application produces.
+`tentative` means **held while the psychologist decides**. Together with `BookingStatus::holdsSlotValues()` it is what prevents two students from claiming the same hour, and `GetAvailableDatesAction` / `GetAvailableSlotsAction` both filter on `status = available` plus a second check for a booking that still holds the slot.
 
 Slot deletion is guarded: `PsychologistSlotPolicy::delete` requires ownership, and the controller refuses to delete a slot with an active booking.
 
@@ -259,12 +314,19 @@ Some actions move several machines at once. These fan-outs are the ones to remem
 
 | Action | `sharings.status` | `counselings.status` | `booking_schedules.status` | `psychologist_slots.status` | Other |
 |---|---|---|---|---|---|
-| Counseling created (with `sharing_id`) | → `Menunggu Persetujuan Siswa` | `dijadwalkan` (default) | — | — | Consent `pending` if `type=external` |
+| Counseling created (with `sharing_id`) | → `Menunggu Persetujuan Siswa` | `menunggu` | — | — | Consent `pending` if `type=external` |
+| Student grants consent (external) | — | → `menunggu_jadwal` | — | — | Consent `granted` + scopes |
+| Student rejects consent | — | → `ditolak` | — | — | Consent `rejected`, scopes nulled |
+| Student books a slot | — | → `menunggu_konfirmasi` | → `pending` | → `tentative` | `deadline_at = now()+24h` |
+| Psychologist confirms | — | → `dijadwalkan` | → `confirmed` | → `confirmed` | AI summary job |
+| Psychologist reschedules | — | → `dijadwalkan` | old → `rescheduled`, new → `confirmed` | old → `available`, new → `confirmed` | AI summary job; student informed only |
+| Psychologist rejects | — | → `menunggu_jadwal` | → `rejected` | → `available` | `reject_reason` saved |
+| Booking expires | — | → `menunggu_jadwal` | → `expired` | → `available` | `BookingExpired` (no listener) |
 | Student acknowledges `accept` | → `Konseling Dijadwalkan` | → `dijadwalkan` | — | — | — |
 | Student acknowledges `decline` | → `Jadwal Ditolak Siswa` | → `ditolak` | — | — | — |
+| Counselor re-proposes | → `Menunggu Persetujuan Siswa` | → `dijadwal_ulang` | — | — | New `scheduled_at` |
+| Counselor cancels | → `Dibatalkan` | → `dibatalkan` | — | — | — |
 | Counselor stores counseling log | — | → `selesai` | — | — | `reports.status` → `Diselesaikan`; `CounselingLog` created |
-| Psychologist confirms booking | — | — | → `confirmed` | → `confirmed` | AI summary job dispatched |
-| Booking expires | — | — | → `expired` | → `available` | `BookingExpired` (no listener) |
 | **Psychologist submits feedback** | → `Diselesaikan` | → `selesai` | → `finished` | — | Saves notes + rating on `clinical_summaries` |
 
 The last row is the widest fan-out in the system: one request closes four records. It is also the only place where a psychologist writes to a `sharings` row.

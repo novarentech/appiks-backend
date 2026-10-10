@@ -77,11 +77,16 @@ class PsychologistSummaryController extends Controller
             abort(403, 'Hanya psikolog yang dapat mengakses halaman ini.');
         }
 
-        // Authorize: Ensure the psychologist owns a confirmed booking for this counseling referral
+        // Authorize: psikolog harus memegang booking yang sesinya memang berjalan
+        // (confirmed) atau sudah ditutup (finished). Booking yang expired,
+        // rejected, atau rescheduled tidak memberi akses ke data klinis.
         $booking = BookingSchedule::where('counseling_id', $counseling->id)
+            ->whereIn('status', BookingStatus::actionableValues())
             ->whereHas('slot', function ($q) use ($profile) {
                 $q->where('psychologist_id', $profile->id);
-            })->first();
+            })
+            ->latest()
+            ->first();
 
         if (!$booking) {
             abort(403, 'Akses ditolak. Anda tidak memiliki rujukan aktif untuk sesi ini.');
@@ -172,11 +177,16 @@ class PsychologistSummaryController extends Controller
             abort(403, 'Hanya psikolog yang dapat mengakses halaman ini.');
         }
 
-        // Authorize: Ensure the psychologist owns a confirmed booking for this counseling referral
+        // Authorize: psikolog harus memegang booking yang sesinya memang berjalan
+        // (confirmed) atau sudah ditutup (finished). Booking yang expired,
+        // rejected, atau rescheduled tidak memberi akses ke data klinis.
         $booking = BookingSchedule::where('counseling_id', $counseling->id)
+            ->whereIn('status', BookingStatus::actionableValues())
             ->whereHas('slot', function ($q) use ($profile) {
                 $q->where('psychologist_id', $profile->id);
-            })->first();
+            })
+            ->latest()
+            ->first();
 
         if (!$booking) {
             abort(403, 'Akses ditolak. Anda tidak memiliki rujukan aktif untuk sesi ini.');
@@ -184,7 +194,7 @@ class PsychologistSummaryController extends Controller
 
         $booking->update(['status' => BookingStatus::FINISHED->value]);
         $counseling->update(['status' => CounselingStatus::SELESAI->value]);
-        $counseling->sharing->update(['status' => ReportStatus::SELESAI->value]);
+        $counseling->sharing?->update(['status' => ReportStatus::SELESAI->value]);
         
         $summary = ClinicalSummary::firstOrCreate(
             ['counseling_id' => $counseling->id],
@@ -291,7 +301,7 @@ class PsychologistSummaryController extends Controller
         }
 
         $hasBooking = BookingSchedule::where('counseling_id', $counseling->id)
-            ->where('status', BookingStatus::CONFIRMED->value)
+            ->whereIn('status', BookingStatus::actionableValues())
             ->whereHas('slot', function ($query) use ($profile) {
                 $query->where('psychologist_id', $profile->id);
             })
@@ -343,7 +353,7 @@ class PsychologistSummaryController extends Controller
         }
 
         $hasBooking = BookingSchedule::where('counseling_id', $counseling->id)
-            ->where('status', BookingStatus::CONFIRMED->value)
+            ->whereIn('status', BookingStatus::actionableValues())
             ->whereHas('slot', function ($query) use ($profile) {
                 $query->where('psychologist_id', $profile->id);
             })

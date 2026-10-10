@@ -118,6 +118,8 @@ Route::middleware('auth:api')->group(function () {
     Route::apiResource('counseling', CounselingController::class)->only(['store', 'show', 'index']);
     Route::post('counseling-logs', [CounselingController::class, 'storeLog']);
     Route::post('counseling/{counseling}/consent', [CounselingController::class, 'sendConsent']);
+    Route::patch('counseling/{counseling}/cancel', [CounselingController::class, 'cancel']);
+    Route::patch('counseling/{counseling}/repropose', [CounselingController::class, 'repropose']);
     Route::prefix('admin')->group(function () {
         Route::patch('psychologists/{psychologist}/toggle', [PsychologistController::class, 'toggleStatus']);
         Route::apiResource('psychologists', PsychologistController::class);

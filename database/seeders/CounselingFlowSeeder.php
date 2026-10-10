@@ -33,6 +33,12 @@ use Illuminate\Database\Seeder;
  *
  *   D) NLP-incident counseling (sourced from a high-risk sharing, no report)
  *      Counseling: status = menunggu (NLP-triggered, counselor notified)
+ *
+ *   E) Re-proposed schedule after the student rejected the first one
+ *      Counseling: dijadwal_ulang (awaiting the student again)
+ *
+ *   F) Cancelled by the counselor
+ *      Counseling: dibatalkan
  */
 class CounselingFlowSeeder extends Seeder
 {
@@ -48,17 +54,19 @@ class CounselingFlowSeeder extends Seeder
 
         // Distribute students across scenarios (cycle through A→B→C→D)
         foreach ($students as $index => $student) {
-            $scenario = $index % 4;
+            $scenario = $index % 6;
 
             match ($scenario) {
                 0 => $this->seedScenarioA($student, $counselor),
                 1 => $this->seedScenarioB($student, $counselor),
                 2 => $this->seedScenarioC($student, $counselor),
                 3 => $this->seedScenarioD($student, $counselor),
+                4 => $this->seedScenarioE($student, $counselor),
+                5 => $this->seedScenarioF($student, $counselor),
             };
         }
 
-        $this->command->info('CounselingFlowSeeder: All 4 scenarios seeded successfully.');
+        $this->command->info('CounselingFlowSeeder: All 6 scenarios seeded successfully.');
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -170,7 +178,8 @@ class CounselingFlowSeeder extends Seeder
             'reason'       => 'Konflik teman sebaya.',
             'type'         => 'internal',
             'method'       => CounselingMethod::OFFLINE->value,
-            'status'       => CounselingStatus::DIJADWALKAN->value,
+            // Jadwal sudah diajukan Guru BK, tapi siswa belum menyetujui.
+            'status'       => CounselingStatus::MENUNGGU->value,
             'resolution'   => null,
             'scheduled_at' => Carbon::now()->addDays(2),
             'cutdown_at'   => null,
@@ -283,6 +292,95 @@ class CounselingFlowSeeder extends Seeder
             'cutdown_at'   => null,
             'created_at'   => $createdDate,
             'updated_at'   => $createdDate,
+        ]);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Scenario E — Schedule re-proposed after the student rejected it
+    // ────────────────────────────────────────────────────────────────────────
+    private function seedScenarioE(User $student, User $counselor): void
+    {
+        $createdDate = Carbon::now()->subDays(rand(4, 9));
+
+        $report = Report::create([
+            'user_id'      => $student->id,
+            'counselor_id' => $counselor->id,
+            'topic'        => 'Kesulitan mengikuti pelajaran',
+            'room'         => 'Ruang BK 2',
+            'date'         => $createdDate->toDateString(),
+            'time'         => '10:00',
+            'status'       => ReportStatus::MENUNGGU_PERSETUJUAN->value,
+            'priority'     => 'sedang',
+            'notes'        => 'Siswa menolak jadwal pertama karena bentrok jam pelajaran.',
+            'created_at'   => $createdDate,
+            'updated_at'   => $createdDate->copy()->addDays(2),
+        ]);
+
+        $sharing = $this->getOrCreateSharingForStudent($student, $createdDate->copy()->subDay());
+        $sharing?->update(['status' => ReportStatus::MENUNGGU_PERSETUJUAN->value]);
+
+        Counseling::create([
+            'source_type'  => 'regular',
+            'report_id'    => $report->id,
+            'student_id'   => $student->id,
+            'counselor_id' => $counselor->id,
+            'sharing_id'   => $sharing?->id,
+            'room'         => 'Ruang BK 2',
+            'notes'        => 'Jadwal diajukan ulang setelah ditolak siswa.',
+            'reason'       => 'Kesulitan akademik.',
+            'type'         => 'internal',
+            'method'       => CounselingMethod::OFFLINE->value,
+            'status'       => CounselingStatus::DIJADWAL_ULANG->value,
+            'resolution'   => null,
+            'scheduled_at' => Carbon::now()->addDays(3)->setTime(10, 0),
+            'cutdown_at'   => null,
+            'created_at'   => $createdDate,
+            'updated_at'   => $createdDate->copy()->addDays(2),
+        ]);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Scenario F — Cancelled by the counselor
+    // ────────────────────────────────────────────────────────────────────────
+    private function seedScenarioF(User $student, User $counselor): void
+    {
+        $createdDate = Carbon::now()->subDays(rand(10, 20));
+
+        $report = Report::create([
+            'user_id'      => $student->id,
+            'counselor_id' => $counselor->id,
+            'topic'        => 'Keterlambatan berulang',
+            'room'         => 'Ruang BK 1',
+            'date'         => $createdDate->toDateString(),
+            'time'         => '08:00',
+            'status'       => ReportStatus::DIBATALKAN->value,
+            'priority'     => 'rendah',
+            'notes'        => 'Kasus ditutup setelah ditangani wali kelas.',
+            'result'       => 'Dibatalkan Guru BK karena sudah selesai di tingkat wali kelas.',
+            'created_at'   => $createdDate,
+            'updated_at'   => $createdDate->copy()->addDays(3),
+        ]);
+
+        $sharing = $this->getOrCreateSharingForStudent($student, $createdDate->copy()->subDay());
+        $sharing?->update(['status' => ReportStatus::DIBATALKAN->value]);
+
+        Counseling::create([
+            'source_type'  => 'regular',
+            'report_id'    => $report->id,
+            'student_id'   => $student->id,
+            'counselor_id' => $counselor->id,
+            'sharing_id'   => $sharing?->id,
+            'room'         => 'Ruang BK 1',
+            'notes'        => 'Dibatalkan Guru BK; kasus selesai di tingkat wali kelas.',
+            'reason'       => 'Keterlambatan berulang.',
+            'type'         => 'internal',
+            'method'       => CounselingMethod::OFFLINE->value,
+            'status'       => CounselingStatus::DIBATALKAN->value,
+            'resolution'   => null,
+            'scheduled_at' => $createdDate->copy()->addDays(1),
+            'cutdown_at'   => null,
+            'created_at'   => $createdDate,
+            'updated_at'   => $createdDate->copy()->addDays(3),
         ]);
     }
 

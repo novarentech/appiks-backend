@@ -3,6 +3,7 @@
 namespace App\Actions;
 
 use App\Enums\BookingStatus;
+use App\Enums\SlotStatus;
 use App\Models\Counseling;
 use App\Models\PsychologistSlot;
 use Carbon\Carbon;
@@ -16,12 +17,11 @@ class GetAvailableDatesAction
 
         $slots = PsychologistSlot::where('psychologist_id', $profileId)
             ->where('slot_date', '>=', $minDate)
-            ->where('status', 'available')
+            ->where('status', SlotStatus::AVAILABLE->value)
+            // Jaring kedua: slot yang ditahan sudah berstatus tentative/confirmed,
+            // tapi pemeriksaan ini melindungi dari data yang statusnya tidak sinkron.
             ->whereDoesntHave('bookingSchedule', function ($q) {
-                $q->whereIn('status', [
-                    BookingStatus::PENDING->value,
-                    BookingStatus::CONFIRMED->value,
-                ]);
+                $q->whereIn('status', BookingStatus::holdsSlotValues());
             })
             ->get()
             ->groupBy(fn($slot) => $slot->slot_date->toDateString());

@@ -1,7 +1,7 @@
 # Environment & Runbook
 
-<!-- verified: branch=dev commit=266f860 date=2026-10-09 scope=database/seeders,app/Console/Commands,composer.json,phpunit.xml,.github/workflows -->
-> **Terverifikasi terhadap:** `dev` @ `266f860` · 2026-10-09
+<!-- verified: branch=dev commit=working-tree date=2026-10-10 scope=database/seeders,app/Console/Commands,composer.json,phpunit.xml,.github/workflows -->
+> **Terverifikasi terhadap:** `dev` working tree · 2026-10-10
 > **Sumber:** [`database/seeders/`](../../database/seeders/) (23 file) · [`app/Console/Commands/`](../../app/Console/Commands/) · [`composer.json`](../../composer.json) · [`phpunit.xml`](../../phpunit.xml)
 
 Cara menjalankan APPIKS di mesin sendiri, data demo apa yang tersedia, dan apa saja yang bisa membuat Anda bingung di sepuluh menit pertama.
@@ -109,23 +109,25 @@ Dijalankan dua kali, sekali per psikolog (`ermin` dengan `bkdemo1`, `yulia` deng
 
 | # | Skenario | Keadaan akhir | Mendemokan |
 |---|---|---|---|
-| 1 | **Tiga scope → selesai** | Consent `granted` dengan ketiga scope; slot & booking `confirmed`; `CounselingLog` + `ClinicalSummary` lengkap termasuk `raw_payload` ketiga scope; `rating = good` + masukan perbaikan | FLOW-4 jalur bahagia penuh |
-| 2 | **Hanya mood → menunggu** | Scope `[mood_history]`; slot `tentative`; booking `pending` dengan `deadline_at = now()+18 jam`; `raw_payload` hanya berisi baris mood, dua scope lain array kosong | Penegakan consent per scope |
-| 3 | **Curhat + asesmen → menunggu** | Scope `[sharing_history, assesment_logs]`; booking `pending`, `deadline_at = now()+22 jam` (kasus cyber-bullying/trauma) | Kombinasi scope selain mood |
-| 4 | **Hanya asesmen → kadaluarsa** | Scope `[assesment_logs]`; booking `expired` dengan `deadline_at = now()-12 jam`; slot dikembalikan ke `available`; `location = null` | Pekerjaan `referrals:expire-pending` |
+| 1 | **Tiga scope → selesai** | Consent `granted` dengan ketiga scope; **satu booking `rescheduled`** mendahului booking `finished`; `CounselingLog` + `ClinicalSummary` lengkap termasuk `raw_payload` ketiga scope; `rating = good` | FLOW-4 jalur penuh, sekaligus fixture `rescheduled` dan flag `was_rescheduled` |
+| 2 | **Hanya mood → menunggu** | Scope `[mood_history]`; slot `tentative`; booking `pending`, `deadline_at = now()+18 jam`; counseling `menunggu_konfirmasi`; `raw_payload` hanya berisi baris mood | Penegakan consent per scope |
+| 3 | **Curhat + asesmen → menunggu** | Scope `[sharing_history, assesment_logs]`; booking `pending`, `deadline_at = now()+22 jam`; counseling `menunggu_konfirmasi` | Kombinasi scope selain mood |
+| 4 | **Hanya asesmen → kadaluarsa** | Scope `[assesment_logs]`; booking `expired`, `deadline_at = now()-12 jam`; slot `available`; **counseling `menunggu_jadwal`** — siap dipakai menguji "Pilih Jadwal Baru" | Pekerjaan `referrals:expire-pending` dan pemulihan setelah kadaluarsa |
 | 5 | **Terkonfirmasi, akan datang** | Ketiga scope; slot + booking `confirmed` Senin depan 09:00; `location = "{institution}, Lt. 2, Ruang Konseling"` | Keadaan siap-sesi |
-| 6 | **Consent masih menunggu** | Consent `pending` dengan `scopes = null`; `scheduled_at = null`; laporan `Menunggu Persetujuan Siswa` | Titik awal alur consent |
+| 6 | **Consent masih menunggu** | Consent `pending`, `scopes = null`; counseling `menunggu`; laporan `Menunggu Persetujuan Siswa` | Titik awal alur consent |
 
-> **Perhatian:** skenario 2 dan 3 menyetel slot ke `tentative`, padahal **kode aplikasi tidak pernah menulis status itu**. Data demo di sini tidak mencerminkan apa yang dihasilkan aplikasi yang berjalan. Lihat [`08-state-machines.md`](08-state-machines.md).
+> Skenario 5 dan 6 hanya jalan bila psikolog punya 6 siswa; `DemoCaseSeeder` memberi 4, jadi keduanya biasanya terlewat. `BookingStatus::REJECTED` tidak punya fixture — nilai itu dihasilkan lewat `decide` `action=reject` di runtime.
 
-### `CounselingFlowSeeder` — 4 siklus konseling internal
+### `CounselingFlowSeeder` — 6 siklus konseling internal
 
 | Skenario | Keadaan akhir |
 |---|---|
 | A | Selesai, bersumber dari laporan: laporan `Diselesaikan`, konseling `selesai`, ada `CounselingLog` dan `ClinicalSummary` yang `summary_data`-nya berupa **string JSON** (`{chief_complaint, assessment, plan, session_count, resolution}`) |
-| B | Menunggu persetujuan siswa: laporan `Menunggu Persetujuan Siswa`, konseling `dijadwalkan` |
+| B | Menunggu persetujuan siswa: laporan `Menunggu Persetujuan Siswa`, konseling **`menunggu`** |
 | C | Siswa menolak jadwal: laporan `Jadwal Ditolak Siswa`, konseling `ditolak` |
 | D | Insiden NLP: `Sharing` berisiko tinggi + `NlpAnalysis` (`true-positive`, skor 95, zona merah) → `Counseling{source_type: nlp_incident, report_id: null, status: menunggu}` |
+| E | Jadwal diajukan ulang setelah ditolak siswa: konseling **`dijadwal_ulang`**, laporan `Menunggu Persetujuan Siswa` |
+| F | Dibatalkan Guru BK: konseling **`dibatalkan`**, laporan dan curhat `Dibatalkan` |
 
 > Catatan representasi: `summary_data` di seeder ini adalah **string JSON**, sementara di `ReferralFlowSeeder` berupa **prosa biasa**. Konsumen harus menoleransi keduanya.
 

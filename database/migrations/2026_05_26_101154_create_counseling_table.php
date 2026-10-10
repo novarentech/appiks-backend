@@ -28,7 +28,7 @@ return new class extends Migration
             $table->enum('type', ['internal', 'external'])->default('internal');
             $table->enum('resolution', CounselingResolution::cases())->nullable();
             $table->enum('method', CounselingMethod::cases())->nullable();
-            $table->enum('status', CounselingStatus::cases())->default(CounselingStatus::DIJADWALKAN);
+            $table->enum('status', CounselingStatus::cases())->default(CounselingStatus::MENUNGGU);
             $table->dateTime('scheduled_at')->nullable();
             $table->dateTime('cutdown_at')->nullable();
             $table->timestamps();

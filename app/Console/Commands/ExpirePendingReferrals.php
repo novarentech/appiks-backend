@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Enums\BookingStatus;
+use App\Enums\CounselingStatus;
 use App\Enums\SlotStatus;
 use App\Events\BookingExpired;
 use App\Models\BookingSchedule;
@@ -17,7 +18,7 @@ class ExpirePendingReferrals extends Command
 
     public function handle()
     {
-        $expiredBookings = BookingSchedule::expired()->with('slot')->get();
+        $expiredBookings = BookingSchedule::expired()->with(['slot', 'counseling'])->get();
         $count = 0;
 
         foreach ($expiredBookings as $booking) {
@@ -28,6 +29,14 @@ class ExpirePendingReferrals extends Command
                 // Revert slot back to available
                 if ($booking->slot) {
                     $booking->slot->update(['status' => SlotStatus::AVAILABLE->value]);
+                }
+
+                // Rujukannya sendiri tetap hidup: siswa dikembalikan ke tahap
+                // memilih jadwal, bukan kasusnya ditutup.
+                $counseling = $booking->counseling;
+
+                if ($counseling && $counseling->status->isActive()) {
+                    $counseling->update(['status' => CounselingStatus::MENUNGGU_JADWAL->value]);
                 }
 
                 // Dispatch notification event

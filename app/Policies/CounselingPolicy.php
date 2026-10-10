@@ -23,4 +23,22 @@ class CounselingPolicy
     {
         return $counseling->student_id == $user->id || $counseling->psychologist_id == $user->id || $counseling->counselor_id == $user->id;
     }
+
+    /**
+     * Hanya siswa pemilik sesi yang boleh menyetujui atau menolak jadwal
+     * yang diajukan Guru BK.
+     */
+    public function acknowledge(User $user, Counseling $counseling): bool
+    {
+        return $counseling->student_id == $user->id;
+    }
+
+    /**
+     * Membatalkan sesi dan mengajukan ulang jadwal adalah wewenang Guru BK
+     * yang ditugaskan pada sesi itu.
+     */
+    public function manageSchedule(User $user, Counseling $counseling): bool
+    {
+        return $counseling->counselor_id == $user->id;
+    }
 }

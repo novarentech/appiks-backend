@@ -26,7 +26,7 @@ use Illuminate\Database\Seeder;
  * Seeds comprehensive referral scenarios for demo and testing.
  *
  * Scenarios:
- *   A) 3 Kategori (Mood + Red Zone + Asesmen BK) — Confirmed & Selesai dengan Ringkasan AI + Catatan Klinis
+ *   A) 3 Kategori (Mood + Red Zone + Asesmen BK) — Selesai (booking finished, didahului satu booking rescheduled)
  *   B) 1 Kategori (Mood Saja) — Menunggu Konfirmasi #1 (Pending, SLA aktif 24 jam)
  *   C) 2 Kategori (Curhat Red Zone + Asesmen BK) — Menunggu Konfirmasi #2 (Pending, SLA aktif 24 jam)
  *   D) 1 Kategori (Catatan Asesmen BK Saja) — Kedaluwarsa (Expired, deadline lampau)
@@ -156,6 +156,27 @@ class ReferralFlowSeeder extends Seeder
             'updated_at'    => $sessionDate->copy()->subDays(2),
         ]);
 
+        // Jadwal pertama digeser psikolog sebelum akhirnya terkonfirmasi, supaya
+        // nilai BookingStatus::RESCHEDULED dan flag `was_rescheduled` punya fixture.
+        $rescheduledSlot = $this->createSlot(
+            date: $sessionDate->copy()->subDay()->toDateString(),
+            startTime: '13:00:00',
+            endTime: '14:00:00',
+            status: SlotStatus::AVAILABLE,
+        );
+
+        BookingSchedule::create([
+            'counseling_id' => $counseling->id,
+            'slot_id'       => $rescheduledSlot->id,
+            'student_id'    => $student->id,
+            'status'        => BookingStatus::RESCHEDULED->value,
+            'reject_reason' => 'Jadwal bentrok dengan agenda klinik, digeser ke pagi berikutnya.',
+            'deadline_at'   => $sessionDate->copy()->subDays(2),
+            'location'      => null,
+            'created_at'    => $sessionDate->copy()->subDays(3),
+            'updated_at'    => $sessionDate->copy()->subDays(2),
+        ]);
+
         $slot = $this->createSlot(
             date: $sessionDate->toDateString(),
             startTime: '08:00:00',
@@ -167,7 +188,7 @@ class ReferralFlowSeeder extends Seeder
             'counseling_id' => $counseling->id,
             'slot_id'       => $slot->id,
             'student_id'    => $student->id,
-            'status'        => BookingStatus::CONFIRMED->value,
+            'status'        => BookingStatus::FINISHED->value,
             'deadline_at'   => $sessionDate->copy()->subDays(1),
             'location'      => $this->getLocation(true),
             'created_at'    => $sessionDate->copy()->subDays(2),
@@ -232,7 +253,7 @@ class ReferralFlowSeeder extends Seeder
             counselor: $counselor,
             report: $report,
             sharing: $sharing,
-            status: CounselingStatus::DIJADWALKAN,
+            status: CounselingStatus::MENUNGGU_KONFIRMASI,
             resolution: CounselingResolution::NEEDMORE,
             scheduledAt: Carbon::now()->startOfWeek()->addWeek()->setTime(8, 0),
         );
@@ -298,7 +319,7 @@ class ReferralFlowSeeder extends Seeder
             counselor: $counselor,
             report: $report,
             sharing: $sharing,
-            status: CounselingStatus::DIJADWALKAN,
+            status: CounselingStatus::MENUNGGU_KONFIRMASI,
             resolution: CounselingResolution::NEEDMORE,
             scheduledAt: Carbon::now()->startOfWeek()->addWeek()->addDays(2)->setTime(9, 0),
         );
@@ -373,7 +394,7 @@ class ReferralFlowSeeder extends Seeder
             counselor: $counselor,
             report: $report,
             sharing: $sharing,
-            status: CounselingStatus::DIJADWALKAN,
+            status: CounselingStatus::MENUNGGU_JADWAL,
             resolution: CounselingResolution::NEEDMORE,
             scheduledAt: Carbon::now()->addDays(2),
         );
@@ -517,7 +538,7 @@ class ReferralFlowSeeder extends Seeder
             counselor: $counselor,
             report: $report,
             sharing: $sharing,
-            status: CounselingStatus::DIJADWALKAN,
+            status: CounselingStatus::MENUNGGU,
             resolution: CounselingResolution::NEEDMORE,
             scheduledAt: null,
         );

@@ -1,7 +1,7 @@
 # Authorization
 
-<!-- verified: branch=dev commit=266f860 date=2026-10-09 scope=app/Policies,app/Providers/AppServiceProvider.php,app/Http/Controllers,app/Http/Requests,routes -->
-> **Verified against:** `dev` @ `266f860` · 2026-10-09
+<!-- verified: branch=dev commit=working-tree date=2026-10-10 scope=app/Policies,app/Providers/AppServiceProvider.php,app/Http/Controllers,app/Http/Requests,routes -->
+> **Verified against:** `dev` working tree · 2026-10-10
 > **Sources:** [`app/Providers/AppServiceProvider.php`](../../app/Providers/AppServiceProvider.php) · [`app/Policies/`](../../app/Policies/) (11 files) · [`app/Http/Controllers/`](../../app/Http/Controllers/) · [`app/Http/Requests/`](../../app/Http/Requests/)
 
 There is **no permission package** (no spatie/laravel-permission), **no permissions table**, and **no `app/Http/Middleware` directory at all**. Authorization is a single `users.role` string column, enforced in four scattered places.
@@ -56,7 +56,7 @@ Note the asymmetry in `destroy`: a superadmin can delete **only** admins, while 
 
 Eleven policy classes in [`app/Policies/`](../../app/Policies/). Three are registered explicitly in `AppServiceProvider` (`PsychologistPolicy`, `PsychologistSlotPolicy`, `BookingSchedulePolicy`); the rest resolve by Laravel's naming convention.
 
-**Many abilities have non-standard names** — `recapPerMonth`, `viewSchoolTrend`, `viewHistory`, `export`, `viewGraph`, `viewStudentReports`, `viewLatest`, `scheduleMeeting`, `storeLog`, `viewStudent`, `falsePositive`, `manage`, `decide`. These are invoked explicitly via `Gate::authorize('name', ...)` and will **not** be picked up by `authorizeResource()` or implicit resource authorization.
+**Many abilities have non-standard names** — `recapPerMonth`, `viewSchoolTrend`, `viewHistory`, `export`, `viewGraph`, `viewStudentReports`, `viewLatest`, `scheduleMeeting`, `storeLog`, `viewStudent`, `acknowledge`, `manageSchedule`, `falsePositive`, `manage`, `decide`. These are invoked explicitly via `Gate::authorize('name', ...)` and will **not** be picked up by `authorizeResource()` or implicit resource authorization.
 
 #### Policy inventory
 
@@ -70,6 +70,8 @@ Eleven policy classes in [`app/Policies/`](../../app/Policies/). Three are regis
 | [`BookingSchedulePolicy`](../../app/Policies/BookingSchedulePolicy.php) | `decide` | the booking's slot belongs to the caller's `psychologistProfile` |
 | [`CounselingPolicy`](../../app/Policies/CounselingPolicy.php) | `storeLog` | caller **is** the counseling's `counselor_id` |
 | | `viewStudent` | caller is the counseling's `student_id`, `psychologist_id`, **or** `counselor_id` |
+| | `acknowledge` | caller **is** the counseling's `student_id` |
+| | `manageSchedule` | caller **is** the counseling's `counselor_id` — cancel and re-propose |
 | [`CounselingConsentPolicy`](../../app/Policies/CounselingConsentPolicy.php) | `view`, `update` | caller is the consent's counseling `student_id` — **students only, by construction** |
 | [`SharingPolicy`](../../app/Policies/SharingPolicy.php) | `create` | `role == student` |
 | | `view` | caller owns the sharing **or** is the author's `counselor_id` |
@@ -182,7 +184,8 @@ Legend: ✅ allowed · ⚠️ allowed under a condition (stated) · ❌ denied.
 | **Create counseling / referral** | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
 | Write counseling log | ❌ | ❌ | ❌ | ❌ | ⚠️ assigned counselor | ❌ | ❌ |
 | List own counselings | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
-| Acknowledge proposed counseling | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Acknowledge proposed counseling | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ own, while awaiting them | ❌ |
+| Cancel / re-propose counseling | ❌ | ❌ | ❌ | ❌ | ⚠️ assigned counselor | ❌ | ❌ |
 | **Read / submit consent** | ❌ | ❌ | ❌ | ❌ | ⚠️ read only | ✅ | ⚠️ read only |
 | **Browse slots, create booking** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ⚠️ read dates/slots |
 | **Publish / delete own slots** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
@@ -206,11 +209,11 @@ Facts, verified at the cited locations. Not fixed in this documentation pass.
 
 By contrast, `index` on the same controller is restricted to students and scoped to `student_id = Auth::id()`.
 
-### `PATCH /api/student/counselings/{counseling}/acknowledge` has no authorization
+### `GET /api/counseling/{counseling}` still has no authorization
 
-[`CounselingController::acknowledge`](../../app/Http/Controllers/CounselingController.php) validates `type` is `accept` or `decline` and then writes to the counseling **and** to the linked sharing. There is no gate, no policy, and no check that the caller is the counseling's student. Any authenticated user can accept or decline any counseling session by id.
+`CounselingController::show` loads the model and returns it with no gate, policy, or ownership check. Any authenticated user can read any counseling session by incrementing the id.
 
-It also calls `$counseling->sharing->update(...)` without a null check. Since `counselings.sharing_id` is `NOT NULL` but has **no database foreign key**, a dangling id makes `->sharing` null and the request fails with a type error rather than a clean 4xx.
+> `PATCH /api/student/counselings/{counseling}/acknowledge` **was** in the same state and is now fixed: it calls `Gate::authorize('acknowledge', $counseling)` (student owner only) and additionally refuses unless the counseling is in a status that awaits the student (`CounselingStatus::needsStudentAction()`).
 
 ### `User::$guarded = []` plus `editProfile` allows self-escalation
 
