@@ -141,6 +141,29 @@ class PrincipalDashboardController extends Controller
             $query->whereHas('user.counselor', fn($q) => $q->where('name', 'like', "%{$counselorName}%"));
         }
 
+        // Filter: marked
+        if ($request->has('marked') && $request->input('marked') !== null && $request->input('marked') !== '') {
+            $isMarked = filter_var($request->input('marked'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($isMarked !== null) {
+                $latestNotifications = auth()->user()->notifications()
+                    ->latest()
+                    ->get()
+                    ->groupBy(fn($n) => (int) ($n->data['incident_id'] ?? 0))
+                    ->filter(fn($group, $key) => $key > 0)
+                    ->map->first();
+
+                $markedIncidentIds = $latestNotifications
+                    ->filter(fn($n) => !is_null($n->read_at))
+                    ->keys();
+
+                if ($isMarked) {
+                    $query->whereIn('id', $markedIncidentIds);
+                } else {
+                    $query->whereNotIn('id', $markedIncidentIds);
+                }
+            }
+        }
+
         $loadNotifications = function ($incidentIds) {
             if ($incidentIds->isEmpty()) {
                 return collect();

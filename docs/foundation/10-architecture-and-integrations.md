@@ -1,8 +1,8 @@
 # Architecture & Integrations
 
-<!-- verified: branch=dev commit=266f860 date=2026-10-09 scope=Dockerfile,supervisord.conf,routes/console.php,config,app/Jobs,app/Events,app/Listeners,app/Observers,app/Services -->
-> **Verified against:** `dev` @ `266f860` · 2026-10-09
-> **Sources:** [`Dockerfile`](../../Dockerfile) · [`supervisord.conf`](../../supervisord.conf) · [`routes/console.php`](../../routes/console.php) · [`config/`](../../config/) · [`app/Jobs/`](../../app/Jobs/) · [`app/Providers/AppServiceProvider.php`](../../app/Providers/AppServiceProvider.php)
+<!-- verified: branch=dev date=2026-10-12 scope=Dockerfile,supervisord.conf,routes/console.php,config,app/Jobs,app/Events,app/Listeners,app/Observers,app/Services,app/Notifications -->
+> **Verified against:** `dev` · 2026-10-12
+> **Sources:** [`Dockerfile`](../../Dockerfile) · [`supervisord.conf`](../../supervisord.conf) · [`routes/console.php`](../../routes/console.php) · [`config/`](../../config/) · [`app/Jobs/`](../../app/Jobs/) · [`app/Notifications/`](../../app/Notifications/) · [`app/Providers/AppServiceProvider.php`](../../app/Providers/AppServiceProvider.php)
 
 ## Container view
 
@@ -73,9 +73,9 @@ The only registered provider is `AppServiceProvider`, which does five things: co
 
 | Job | Dispatched by | What it does |
 |---|---|---|
-| [`ProcessNlpAnalysisJob`](../../app/Jobs/ProcessNlpAnalysisJob.php) | `SharingController::store` — `dispatchSync` first, queue on failure | Calls the NLP service; writes zone, priority, and SLA deadline |
+| [`ProcessNlpAnalysisJob`](../../app/Jobs/ProcessNlpAnalysisJob.php) | `SharingController::store` — `dispatchSync` first, queue on failure | Calls the NLP service; writes zone, priority, and SLA deadline; dispatches `ZoneNotificationDispatcher` on Red/Yellow Zone |
 | [`GenerateGeminiReferralSummaryJob`](../../app/Jobs/GenerateGeminiReferralSummaryJob.php) | `DecideReferralAction` on `confirm` | Builds the consent-filtered payload, calls Gemini, upserts `clinical_summaries` |
-| [`ZoneNotificationDispatcher`](../../app/Jobs/ZoneNotificationDispatcher.php) | **nothing** | `[PARTIAL]` Would notify the assigned counselor and all headteachers of the school |
+| [`ZoneNotificationDispatcher`](../../app/Jobs/ZoneNotificationDispatcher.php) | [`ProcessNlpAnalysisJob`](../../app/Jobs/ProcessNlpAnalysisJob.php) | Notifies the assigned counselor and all headteachers of the school (Red & Yellow Zone) |
 
 ### Events and listeners
 
@@ -229,13 +229,13 @@ This is a hand-rolled free-tier quota spreader. It has no locking, so two concur
 | Aspect | State |
 |---|---|
 | Driver | Defaults to `log` — nothing is actually delivered |
-| Notification classes | Exactly one: [`RedZoneAlertNotification`](../../app/Notifications/RedZoneAlertNotification.php), channels `['database', 'mail']`, `ShouldQueue` |
-| Payload | Deliberately minimal: `incident_id`, `message`, `created_at` — **no student content**, for privacy |
-| Mail body | A plain `MailMessage` linking to `/headteacher/dashboard` |
-| Read receipts | Work, via Laravel's `notifications` table and `markAsRead()` |
+| Notification classes | [`RedZoneAlertNotification`](../../app/Notifications/RedZoneAlertNotification.php) (critical tier, SLA 2h), [`YellowZoneAlertNotification`](../../app/Notifications/YellowZoneAlertNotification.php) (warning tier, SLA 72h), channels `['database', 'mail']`, `ShouldQueue` |
+| Payload | Minimal metadata: `incident_id`, `student_name`, `zone`, `level`, `time`, `url`, `created_at` — **no student content**, for privacy |
+| Mail body | `MailMessage` with student name, time, SLA deadline, and link to case — no curhat text |
+| Read receipts | Supported via Laravel's `notifications` table, `PATCH /api/notifications/{id}/read`, and `PATCH /api/notifications/read-all` |
 | Push / FCM / WhatsApp / SMS | **None.** `config/services.php` has a stock `slack` block that is never used |
 
-`[PARTIAL]` The dispatcher job that would send this notification is never called. See [`05-user-flows.md`](05-user-flows.md) FLOW-7.
+Dispatched by [`ZoneNotificationDispatcher`](../../app/Jobs/ZoneNotificationDispatcher.php) when [`ProcessNlpAnalysisJob`](../../app/Jobs/ProcessNlpAnalysisJob.php) flags Red Zone or Yellow Zone.
 
 ---
 
@@ -248,7 +248,7 @@ This is a hand-rolled free-tier quota spreader. It has no locking, so two concur
 | Append-only clinical audit trail | `CounselingLogObserver` + no soft deletes | ✅ |
 | Consent-gated de-anonymisation | `PsychologistSummaryController` + `ReferralPayloadBuilder` | ✅ |
 | Principal sees metadata only | `PrincipalDashboardController` column selection | ✅ |
-| Notification payload carries no content | `RedZoneAlertNotification` | ✅ |
+| Notification payload carries no content | `RedZoneAlertNotification`, `YellowZoneAlertNotification` | ✅ |
 | Pseudonymised ids in AI payload | `ref_` / `stu_` + md5 prefix | ✅ |
 | **Sensitive-keyword masking** | `maskDynamicNlpKeywords()` | ❌ `[PARTIAL]` — call site commented out at [`ReferralPayloadBuilder.php:81`](../../app/Services/ReferralPayloadBuilder.php); the field is still named `masked_text` but holds verbatim text |
 | **Consent revocation** | — | ❌ `[SPEC-ONLY]` |

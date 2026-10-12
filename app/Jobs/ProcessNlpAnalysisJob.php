@@ -85,6 +85,13 @@ class ProcessNlpAnalysisJob implements ShouldQueue
             ],
         );
 
+        if ($parent instanceof \App\Models\Sharing) {
+            $parent->refresh();
+            if (in_array($response['zone_status'], ['Red Zone', 'Yellow Zone'], true)) {
+                ZoneNotificationDispatcher::dispatch($parent, $response['zone_status']);
+            }
+        }
+
         if ($response['zone_status'] == 'No Trigger') {
             $this->nlpAnalysis->nlpable()?->update([
                 'status' => ReportStatus::MENUNGGU_TANGGAPAN->value,

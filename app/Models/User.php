@@ -102,4 +102,9 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->hasOne(PsychologistProfile::class);
     }
+
+    public function routeNotificationForMail($notification = null): ?string
+    {
+        return $this->attributes['email'] ?? ($this->username ? "{$this->username}@appiks.id" : null);
+    }
 }

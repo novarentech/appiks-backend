@@ -164,6 +164,14 @@ Route::middleware('auth:api')->group(function () {
         Route::get('latest-report', [ReportController::class, 'latestOfStudent']);
     });
 
+    // General user notifications (all roles)
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [App\Http\Controllers\NotificationController::class, 'index']);
+        Route::get('unread-count', [App\Http\Controllers\NotificationController::class, 'unreadCount']);
+        Route::patch('read-all', [App\Http\Controllers\NotificationController::class, 'markAllAsRead']);
+        Route::patch('{id}/read', [App\Http\Controllers\NotificationController::class, 'markAsRead']);
+    });
+
     // Student digital consent & dashboard routes
     Route::prefix('student')->group(function () {
         Route::get('dashboard/widgets', [StudentDashboardController::class, 'getWidgets']);

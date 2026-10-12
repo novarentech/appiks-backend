@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Models\Sharing;
 use App\Models\User;
 use App\Notifications\RedZoneAlertNotification;
+use App\Notifications\YellowZoneAlertNotification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -17,22 +18,38 @@ class ZoneNotificationDispatcher implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public function __construct(public Sharing $incident) {}
+    public function __construct(
+        public Sharing $incident,
+        public string $zone = 'Red Zone'
+    ) {}
 
     public function handle(): void
     {
-        // 1. Get the assigned Guru BK
-        $counselor = $this->incident->user->counselor;
+        $this->incident->loadMissing('user.counselor');
+        $schoolId = $this->incident->user?->school_id;
+
+        // 1. Get the assigned Guru BK (or fallback to all counselors in the same school)
+        $counselor = $this->incident->user?->counselor;
+        $counselors = $counselor
+            ? collect([$counselor])
+            : User::where('role', UserRole::COUNSELOR->value)->where('school_id', $schoolId)->get();
 
         // 2. Get the Principal(s) of the same school
-        $schoolId = $this->incident->user->school_id;
         $principals = User::where('role', UserRole::HEADTEACHER->value)
             ->where('school_id', $schoolId)
             ->get();
 
-        $recipients = collect([$counselor])->merge($principals)->filter();
+        $recipients = $counselors->merge($principals)->filter()->unique('id');
 
-        // 3. Dispatch Notification
-        Notification::send($recipients, new RedZoneAlertNotification($this->incident));
+        if ($recipients->isEmpty()) {
+            return;
+        }
+
+        // 3. Dispatch Notification based on detected zone
+        if ($this->zone === 'Yellow Zone') {
+            Notification::send($recipients, new YellowZoneAlertNotification($this->incident));
+        } else {
+            Notification::send($recipients, new RedZoneAlertNotification($this->incident));
+        }
     }
 }
