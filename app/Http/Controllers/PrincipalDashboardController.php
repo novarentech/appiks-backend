@@ -74,7 +74,7 @@ class PrincipalDashboardController extends Controller
      *     assigned_counselor: string|null,
      *     is_sla_breached: bool,
      *     marked: bool,
-     *     notification_id: int | null
+     *     notification_id: string|null
      *   }>
      * }
      */
@@ -141,35 +141,22 @@ class PrincipalDashboardController extends Controller
             $query->whereHas('user.counselor', fn($q) => $q->where('name', 'like', "%{$counselorName}%"));
         }
 
-        if ($request->has('page')) {
-            $paginated = $query->paginate($request->input('per_page', 15));
-            $paginated->getCollection()->transform(function ($incident) {
-                $isBreached = is_null($incident->acknowledged_at) && $incident->created_at->diffInHours(now()) >= 2;
+        $loadNotifications = function ($incidentIds) {
+            if ($incidentIds->isEmpty()) {
+                return collect();
+            }
 
-                return [
-                    'id' => $incident->id,
-                    'name' => $incident->user->name,
-                    'room' => $incident->user->room ? ($incident->user->room->level.' '.$incident->user->room->name) : null,
-                    'status' => $incident->status,
-                    'priority' => $incident->priority,
-                    'created_at' => $incident->created_at,
-                    'scheduled_at' => $incident->counseling?->scheduled_at,
-                    'acknowledged_at' => $incident->acknowledged_at,
-                    'assigned_counselor' => $incident->user->counselor->name ?? null,
-                    'is_sla_breached' => $isBreached,
-                    'marked'=>true,
-                    'notification_id'=>null
-                ];
-            });
+            return auth()->user()->notifications()
+                ->whereIn('data->incident_id', $incidentIds)
+                ->latest()
+                ->get()
+                ->groupBy(fn($n) => (int) ($n->data['incident_id'] ?? 0))
+                ->map->first();
+        };
 
-            return $this->success($paginated, 'Daftar insiden berhasil diambil.');
-        }
-
-        $incidents = $query->get();
-
-        $mapped = $incidents->map(function ($incident) {
-            // SLA Logic (BE-12.3): Breached if not acknowledged for 2 hours
+        $formatIncident = function ($incident, $notifications) {
             $isBreached = is_null($incident->acknowledged_at) && $incident->created_at->diffInHours(now()) >= 2;
+            $notification = $notifications->get($incident->id);
 
             return [
                 'id' => $incident->id,
@@ -182,8 +169,23 @@ class PrincipalDashboardController extends Controller
                 'acknowledged_at' => $incident->acknowledged_at,
                 'assigned_counselor' => $incident->user->counselor->name ?? null,
                 'is_sla_breached' => $isBreached,
+                'marked' => $notification ? !is_null($notification->read_at) : false,
+                'notification_id' => $notification?->id,
             ];
-        });
+        };
+
+        if ($request->has('page')) {
+            $paginated = $query->paginate($request->input('per_page', 15));
+            $notifications = $loadNotifications($paginated->getCollection()->pluck('id'));
+
+            $paginated->getCollection()->transform(fn($incident) => $formatIncident($incident, $notifications));
+
+            return $this->success($paginated, 'Daftar insiden berhasil diambil.');
+        }
+
+        $incidents = $query->get();
+        $notifications = $loadNotifications($incidents->pluck('id'));
+        $mapped = $incidents->map(fn($incident) => $formatIncident($incident, $notifications));
 
         return $this->success($mapped, 'Daftar insiden berhasil diambil.');
     }
