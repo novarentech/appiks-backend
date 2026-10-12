@@ -14,4 +14,5 @@ enum ReportStatus: string
     case DIBATALKAN            = 'Dibatalkan';
     case DITOLAK             = 'Jadwal Ditolak Siswa';
     case BUKAN_URGENT       = 'Bukan Urgent';
+    case MENUNGGU_DISKUSI   = 'Menunggu Diskusi';
 }

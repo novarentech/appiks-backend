@@ -25,7 +25,7 @@ class ZoneNotificationDispatcher implements ShouldQueue
 
     public function handle(): void
     {
-        $this->incident->loadMissing('user.counselor');
+        $this->incident->loadMissing(['user.counselor', 'user.room']);
         $schoolId = $this->incident->user?->school_id;
 
         // 1. Get the assigned Guru BK (or fallback to all counselors in the same school)

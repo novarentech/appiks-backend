@@ -50,12 +50,14 @@ class YellowZoneAlertNotification extends Notification implements ShouldQueue
     {
         $studentName = $this->incident->user?->name ?? 'Siswa';
         $time = $this->incident->created_at?->toIso8601String();
+        $room = $this->incident->user?->room;
+        $studentRoom = $room ? trim(($room->level ?? '') . ' ' . ($room->name ?? '')) : null;
 
         return [
             'incident_id'  => $this->incident->id,
             'student_name' => $studentName,
-            'student_room' => $this->incident->user?->room->level . ' ' . $this->incident->user?->room->name,
-            'counselor_name' => $this->incident->user?->counselor->name,
+            'student_room' => $studentRoom,
+            'counselor_name' => $this->incident->user?->counselor?->name,
             'zone'         => 'Yellow Zone',
             'level'        => 'warning',
             'time'         => $time,

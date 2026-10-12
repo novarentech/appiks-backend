@@ -12,6 +12,7 @@ enum CounselingStatus: string
     case SELESAI              = 'selesai';
     case DITOLAK              = 'ditolak';
     case DIBATALKAN           = 'dibatalkan';
+    case MENUNGGU_DISKUSI     = 'menunggu_diskusi';
 
     /**
      * Kasus masih berjalan dan menunggu tindakan dari salah satu pihak.
