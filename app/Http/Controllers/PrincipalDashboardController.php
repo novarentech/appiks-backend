@@ -84,7 +84,7 @@ class PrincipalDashboardController extends Controller
 
         // STRICT RBAC: Select only metadata columns, omit description/reply/title
         $query = Sharing::select(['id', 'user_id', 'status', 'priority', 'created_at', 'acknowledged_at'])
-            ->with(['counseling:id,sharing_id,psychologist_id,scheduled_at', 'user:id,counselor_id,room_id,name', 'user.counselor:id,name', 'user.room:id,level,name', 'counseling.psychologist:id,name'])
+            ->with(['counseling:counselings.id,counselings.sharing_id,counselings.scheduled_at', 'user:id,counselor_id,room_id,name', 'user.counselor:id,name', 'user.room:id,level,name'])
             ->whereHas('user', fn($q) => $q->where('school_id', $schoolId))
             ->where('priority', 'tinggi') // Only fetch high priority (Red Zone)
             ->orderByDesc('created_at');
