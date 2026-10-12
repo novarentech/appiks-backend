@@ -72,7 +72,9 @@ class PrincipalDashboardController extends Controller
      *     scheduled_at: string|null,
      *     acknowledged_at: string|null,
      *     assigned_counselor: string|null,
-     *     is_sla_breached: bool
+     *     is_sla_breached: bool,
+     *     marked: bool,
+     *     notification_id: int | null
      *   }>
      * }
      */
@@ -155,6 +157,8 @@ class PrincipalDashboardController extends Controller
                     'acknowledged_at' => $incident->acknowledged_at,
                     'assigned_counselor' => $incident->user->counselor->name ?? null,
                     'is_sla_breached' => $isBreached,
+                    'marked'=>true,
+                    'notification_id'=>null
                 ];
             });
 
