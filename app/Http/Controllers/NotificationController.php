@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Traits\ApiResponder;
 use Dedoc\Scramble\Attributes\Group;
+use Dedoc\Scramble\Attributes\QueryParameter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -15,6 +16,11 @@ class NotificationController extends Controller
      * Get user notifications
      *
      * Mengambil daftar notifikasi untuk pengguna yang sedang diautentikasi (semua role).
+     *
+     * @queryParam unread boolean Filter status terbaca (true untuk belum dibaca, false untuk sudah dibaca). Example: true
+     * @queryParam class string Filter jenis notifikasi (misal: RedZoneAlertNotification). Example: RedZoneAlertNotification
+     * @queryParam per_page int Jumlah notifikasi per halaman jika menggunakan pagination. Default: 15. Example: 15
+     * @queryParam page int Halaman pagination. Example: 1
      *
      * @response array{
      *   success: true,
@@ -29,6 +35,7 @@ class NotificationController extends Controller
      * }
      */
     #[Group('Notifications')]
+    #[QueryParameter('class', description: 'Filter jenis notifikasi (misal: RedZoneAlertNotification).', type: 'string')]
     public function index(Request $request): JsonResponse
     {
         $user = auth()->user();
@@ -42,6 +49,8 @@ class NotificationController extends Controller
                 $query->whereNotNull('read_at');
             }
         }
+
+        $this->applyClassFilter($query, $request);
 
         $format = fn($n) => [
             'id'         => $n->id,
@@ -68,6 +77,8 @@ class NotificationController extends Controller
      *
      * Mendapatkan jumlah notifikasi yang belum dibaca untuk pengguna yang sedang login.
      *
+     * @queryParam class string Filter jenis notifikasi (misal: RedZoneAlertNotification). Example: RedZoneAlertNotification
+     *
      * @response array{
      *   success: true,
      *   message: string,
@@ -77,11 +88,37 @@ class NotificationController extends Controller
      * }
      */
     #[Group('Notifications')]
-    public function unreadCount(): JsonResponse
+    #[QueryParameter('class', description: 'Filter jenis notifikasi (misal: RedZoneAlertNotification).', type: 'string')]
+    public function unreadCount(Request $request): JsonResponse
     {
-        $count = auth()->user()->unreadNotifications()->count();
+        $query = auth()->user()->unreadNotifications();
+        $this->applyClassFilter($query, $request);
+        $count = $query->count();
 
         return $this->success(['unread_count' => $count], 'Jumlah notifikasi belum dibaca berhasil diambil.');
+    }
+
+    /**
+     * Filter query notifikasi berdasarkan parameter class.
+     */
+    protected function applyClassFilter($query, Request $request): void
+    {
+        if ($request->filled('class')) {
+            $rawClass = $request->input('class');
+            $classes = is_array($rawClass) ? $rawClass : explode(',', (string) $rawClass);
+
+            $query->where(function ($q) use ($classes) {
+                foreach ($classes as $c) {
+                    $c = trim($c);
+                    if ($c === '') {
+                        continue;
+                    }
+                    $q->orWhere('type', $c)
+                      ->orWhere('type', 'App\\Notifications\\' . $c)
+                      ->orWhere('type', 'like', '%\\' . $c);
+                }
+            });
+        }
     }
 
     /**
