@@ -32,7 +32,9 @@ class PrincipalDashboardController extends Controller
      *   message: string,
      *   data: array{
      *     need_intention: int,
-     *     resolved_interventions: int
+     *     resolved_interventions: int,
+     *     sla_breached_count: int,
+     *     external_counseling_count: int
      *   }
      * }
      */
@@ -48,6 +50,15 @@ class PrincipalDashboardController extends Controller
                 ->count(),
             'resolved_interventions' => Sharing::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
                 ->where('status', ReportStatus::DITINJAU->value)
+                ->count(),
+            'sla_breached_count' => Sharing::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
+                ->where('priority', 'tinggi')
+                ->whereNull('acknowledged_at')
+                ->where('created_at', '<=', now()->subHours(2))
+                ->count(),
+            'external_counseling_count' => Sharing::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
+                ->where('priority', 'tinggi')
+                ->whereHas('counselings', fn($q) => $q->where('type', 'external'))
                 ->count(),
         ];
 
