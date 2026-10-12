@@ -55,6 +55,8 @@ class RedZoneAlertNotification extends Notification implements ShouldQueue
         return [
             'incident_id'  => $this->incident->id,
             'student_name' => $studentName,
+            'student_room' => $this->incident->user?->room->level . ' ' . $this->incident->user?->room->name,
+            'counselor_name' => $this->incident->user?->counselor->name,
             'zone'         => 'Red Zone',
             'level'        => 'critical',
             'time'         => $time,
