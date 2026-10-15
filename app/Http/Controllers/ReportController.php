@@ -9,6 +9,7 @@ use App\Events\ReportCreated;
 use App\Http\Requests\CloseReportRequest;
 use App\Http\Requests\ConfirmReportRequest;
 use App\Http\Requests\CreateReportRequest;
+use App\Http\Requests\GetReportRequest;
 use App\Http\Requests\RescheduleReportRequest;
 use App\Http\Resources\CounselingResource;
 use App\Http\Resources\ReportResource;
@@ -17,11 +18,11 @@ use App\Models\Sharing;
 use App\Models\User;
 use App\Traits\ApiResponder;
 use Carbon\Carbon;
+use Dedoc\Scramble\Attributes\ExcludeRouteFromDocs;
 use Dedoc\Scramble\Attributes\Group;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
-use Dedoc\Scramble\Attributes\ExcludeAllRoutesFromDocs;
-use Dedoc\Scramble\Attributes\ExcludeRouteFromDocs;
 
 class ReportController extends Controller
 {
@@ -30,20 +31,26 @@ class ReportController extends Controller
     /**
      * Get all report data
      *
-     * Get latest reports data belongs to student for student or belongs to all student of counselored for counselor
+     * Get latest reports data belongs to student for student or belongs to all student of counselored for counselor with filtering and searching.
      */
     #[Group('Report')]
-    #[ExcludeRouteFromDocs]
-    public function index()
+    public function index(GetReportRequest $request): JsonResponse
     {
         $user = Auth::user();
         if ($user->role == UserRole::STUDENT->value) {
-            $reports = $user->report()->with(['counselor', 'user'])->orderBy('date')->get();
+            $query = $user->report()->with(['counselor', 'user.room'])->orderBy('date');
         } elseif ($user->role == UserRole::COUNSELOR->value) {
-            $reports = Report::with(['counselor', 'user', 'user.room'])->whereIn('user_id', $user->counselored->pluck('id'))->get();
+            $query = Report::with(['counselor', 'user.room'])->whereIn('user_id', $user->counselored->pluck('id'))->latest('date');
         } else {
-            $reports = collect();
+            $query = Report::whereRaw('1 = 0');
         }
+
+        $query->filterByRoom($request->input('room'))
+            ->filterByStatus($request->input('status'))
+            ->filterByPriority($request->input('priority'))
+            ->search($request->input('search'));
+
+        $reports = $query->get();
 
         return $this->success(ReportResource::collection($reports));
     }
@@ -186,13 +193,13 @@ class ReportController extends Controller
                 ->groupBy('month')
                 ->orderBy('month')
                 ->pluck('total', 'month');
-        }else{
+        } else {
             $report = Report::whereIn('user_id', Auth::user()->counselored->pluck('id'))
                 ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
                 ->groupBy('month')
                 ->orderBy('month')
                 ->pluck('total', 'month');
-    
+
             $sharing = Sharing::whereIn('user_id', Auth::user()->counselored->pluck('id'))
                 ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
                 ->groupBy('month')
