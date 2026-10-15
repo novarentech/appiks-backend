@@ -1,8 +1,8 @@
 # Architecture & Integrations
 
-<!-- verified: branch=dev date=2026-10-12 scope=Dockerfile,supervisord.conf,routes/console.php,config,app/Jobs,app/Events,app/Listeners,app/Observers,app/Services,app/Notifications -->
-> **Verified against:** `dev` · 2026-10-12
-> **Sources:** [`Dockerfile`](../../Dockerfile) · [`supervisord.conf`](../../supervisord.conf) · [`routes/console.php`](../../routes/console.php) · [`config/`](../../config/) · [`app/Jobs/`](../../app/Jobs/) · [`app/Notifications/`](../../app/Notifications/) · [`app/Providers/AppServiceProvider.php`](../../app/Providers/AppServiceProvider.php)
+<!-- verified: branch=dev date=2026-10-15 scope=Dockerfile,supervisord.conf,routes/console.php,config,app/Jobs,app/Events,app/Listeners,app/Observers,app/Services,app/Notifications,app/Actions/Notification -->
+> **Verified against:** `dev` · 2026-10-15
+> **Sources:** [`Dockerfile`](../../Dockerfile) · [`supervisord.conf`](../../supervisord.conf) · [`routes/console.php`](../../routes/console.php) · [`config/`](../../config/) · [`app/Jobs/`](../../app/Jobs/) · [`app/Notifications/`](../../app/Notifications/) · [`app/Actions/Notification/`](../../app/Actions/Notification/) · [`app/Providers/AppServiceProvider.php`](../../app/Providers/AppServiceProvider.php)
 
 ## Container view
 
@@ -230,12 +230,12 @@ This is a hand-rolled free-tier quota spreader. It has no locking, so two concur
 |---|---|
 | Driver | Defaults to `log` — nothing is actually delivered |
 | Notification classes | [`RedZoneAlertNotification`](../../app/Notifications/RedZoneAlertNotification.php) (critical tier, SLA 2h), [`YellowZoneAlertNotification`](../../app/Notifications/YellowZoneAlertNotification.php) (warning tier, SLA 72h), channels `['database', 'mail']`, `ShouldQueue` |
-| Payload | Minimal metadata: `incident_id`, `student_name`, `zone`, `level`, `time`, `url`, `created_at` — **no student content**, for privacy |
+| Payload | Minimal metadata: `incident_id`, `counseling_id`, `counseling_status`, `student_name`, `student_room`, `counselor_name`, `zone`, `level`, `time`, `url`, `created_at` — **no student content**, for privacy. Synchronized on counseling lifecycle events via [`CounselingObserver`](../../app/Observers/CounselingObserver.php) and [`SyncSharingCounselingStatusAction`](../../app/Actions/Notification/SyncSharingCounselingStatusAction.php) |
 | Mail body | `MailMessage` with student name, time, SLA deadline, and link to case — no curhat text |
 | Read receipts | Supported via Laravel's `notifications` table, `PATCH /api/notifications/{id}/read`, and `PATCH /api/notifications/read-all` |
 | Push / FCM / WhatsApp / SMS | **None.** `config/services.php` has a stock `slack` block that is never used |
 
-Dispatched by [`ZoneNotificationDispatcher`](../../app/Jobs/ZoneNotificationDispatcher.php) when [`ProcessNlpAnalysisJob`](../../app/Jobs/ProcessNlpAnalysisJob.php) flags Red Zone or Yellow Zone.
+Dispatched by [`ZoneNotificationDispatcher`](../../app/Jobs/ZoneNotificationDispatcher.php) when [`ProcessNlpAnalysisJob`](../../app/Jobs/ProcessNlpAnalysisJob.php) flags Red Zone or Yellow Zone. Counseling status is kept synchronized across lifecycle transitions (`created`, `updated`, `deleted`, `restored`).
 
 ---
 

@@ -52,19 +52,24 @@ class RedZoneAlertNotification extends Notification implements ShouldQueue
         $studentName = $this->incident->user?->name ?? 'Siswa';
         $time = $this->incident->created_at?->toIso8601String();
         $room = $this->incident->user?->room;
-        $studentRoom = $room ? trim(($room->level ?? '') . ' ' . ($room->name ?? '')) : null;
+        $counseling = $this->incident->counseling;
+        $counselingStatus = $counseling?->status instanceof \BackedEnum
+            ? $counseling->status->value
+            : ($counseling?->status ? (string) $counseling->status : null);
 
         return [
-            'incident_id'  => $this->incident->id,
-            'student_name' => $studentName,
-            'student_room' => $studentRoom,
-            'counselor_name' => $this->incident->user?->counselor?->name,
-            'zone'         => 'Red Zone',
-            'level'        => 'critical',
-            'time'         => $time,
-            'url'          => $this->getCaseUrl($notifiable),
-            'message'      => "Peringatan Red Zone terdeteksi untuk {$studentName}",
-            'created_at'   => $this->incident->created_at,
+            'incident_id'        => $this->incident->id,
+            'counseling_id'      => $counseling?->id,
+            'counseling_status'  => $counselingStatus,
+            'student_name'       => $studentName,
+            'student_room'       => $studentRoom,
+            'counselor_name'     => $this->incident->user?->counselor?->name,
+            'zone'               => 'Red Zone',
+            'level'              => 'critical',
+            'time'               => $time,
+            'url'                => $this->getCaseUrl($notifiable),
+            'message'            => "Peringatan Red Zone terdeteksi untuk {$studentName}",
+            'created_at'         => $this->incident->created_at,
         ];
     }
 }

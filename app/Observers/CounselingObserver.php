@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Actions\Notification\SyncSharingCounselingStatusAction;
 use App\Actions\RecordCaseEvent;
 use App\Enums\CaseEventType;
 use App\Enums\ConsentStatus;
@@ -38,5 +39,34 @@ class CounselingObserver
                 'status'=> ReportStatus::MENUNGGU_PERSETUJUAN->value
             ]);
         }
+
+        app(SyncSharingCounselingStatusAction::class)->handle($counseling);
+    }
+
+    /**
+     * Handle the Counseling "updated" event.
+     */
+    public function updated(Counseling $counseling): void
+    {
+        if ($counseling->wasChanged('status') || $counseling->wasChanged('sharing_id')) {
+            app(SyncSharingCounselingStatusAction::class)->handle($counseling);
+        }
+    }
+
+    /**
+     * Handle the Counseling "deleted" event.
+     */
+    public function deleted(Counseling $counseling): void
+    {
+        app(SyncSharingCounselingStatusAction::class)->handle($counseling);
+    }
+
+    /**
+     * Handle the Counseling "restored" event.
+     */
+    public function restored(Counseling $counseling): void
+    {
+        app(SyncSharingCounselingStatusAction::class)->handle($counseling);
     }
 }
+
