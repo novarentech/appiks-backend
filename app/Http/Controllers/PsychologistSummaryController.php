@@ -10,6 +10,7 @@ use App\Enums\MoodStatus;
 use App\Actions\BuildMoodRecapAction;
 use App\Enums\CounselingStatus;
 use App\Enums\ReportStatus;
+use App\Enums\UserRole;
 use App\Http\Requests\StoreClinicalSummaryFeedbackRequest;
 use App\Http\Resources\CounselingResource;
 use App\Http\Resources\MoodRecordResource;
@@ -303,21 +304,29 @@ class PsychologistSummaryController extends Controller
     #[Group('Sharing')]
     public function getStudentSharing(Counseling $counseling): JsonResponse
     {
-        $profile = auth()->user()->psychologistProfile;
-        if (!$profile) {
-            abort(403, 'Hanya psikolog yang dapat mengakses halaman ini.');
-        }
-
-        $hasBooking = BookingSchedule::where('counseling_id', $counseling->id)
-            ->whereIn('status', BookingStatus::actionableValues())
-            ->whereHas('slot', function ($query) use ($profile) {
-                $query->where('psychologist_id', $profile->id);
-            })
-            ->exists();
-
-        if (!$hasBooking) {
+        if(auth()->user()->role == UserRole::PSYCHOLOGIST){
+            $profile = auth()->user()->psychologistProfile;
+            if (!$profile) {
+                abort(403, 'Hanya psikolog yang dapat mengakses halaman ini.');
+            }
+    
+            $hasBooking = BookingSchedule::where('counseling_id', $counseling->id)
+                ->whereIn('status', BookingStatus::actionableValues())
+                ->whereHas('slot', function ($query) use ($profile) {
+                    $query->where('psychologist_id', $profile->id);
+                })
+                ->exists();
+    
+            if (!$hasBooking) {
+                abort(403, 'Akses ditolak. Anda tidak memiliki rujukan aktif untuk sesi ini.');
+            }
+            
+        }else if(auth()->user()->role == UserRole::COUNSELOR && $counseling->user->counselor_id !== auth()->user()->id){
             abort(403, 'Akses ditolak. Anda tidak memiliki rujukan aktif untuk sesi ini.');
+        }else{
+            abort(403);
         }
+        
 
         $this->authorizeConsentScope($counseling, 'sharing_history', 'Akses ditolak. Siswa tidak memberikan izin akses riwayat curhat.');
 
@@ -355,21 +364,29 @@ class PsychologistSummaryController extends Controller
     #[Group('Counseling')]
     public function getLatestCounseling(Counseling $counseling): JsonResponse
     {
-        $profile = auth()->user()->psychologistProfile;
-        if (!$profile) {
-            abort(403, 'Hanya psikolog yang dapat mengakses halaman ini.');
-        }
+        if(auth()->user()->role == UserRole::PSYCHOLOGIST){
+            $profile = auth()->user()->psychologistProfile;
+            if (!$profile) {
+                abort(403, 'Hanya psikolog yang dapat mengakses halaman ini.');
+            }
 
-        $hasBooking = BookingSchedule::where('counseling_id', $counseling->id)
-            ->whereIn('status', BookingStatus::actionableValues())
-            ->whereHas('slot', function ($query) use ($profile) {
-                $query->where('psychologist_id', $profile->id);
-            })
-            ->exists();
+            $hasBooking = BookingSchedule::where('counseling_id', $counseling->id)
+                ->whereIn('status', BookingStatus::actionableValues())
+                ->whereHas('slot', function ($query) use ($profile) {
+                    $query->where('psychologist_id', $profile->id);
+                })
+                ->exists();
 
-        if (!$hasBooking) {
+            if (!$hasBooking) {
+                abort(403, 'Akses ditolak. Anda tidak memiliki rujukan aktif untuk sesi ini.');
+            }
+            
+        }else if(auth()->user()->role == UserRole::COUNSELOR && $counseling->user->counselor_id !== auth()->user()->id){
             abort(403, 'Akses ditolak. Anda tidak memiliki rujukan aktif untuk sesi ini.');
+        }else{
+            abort(403);
         }
+        
 
         $this->authorizeConsentScope($counseling, 'assesment_logs', 'Akses ditolak. Siswa tidak memberikan izin akses catatan konseling BK.');
 
