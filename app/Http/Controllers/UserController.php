@@ -11,6 +11,7 @@ use App\Http\Requests\UpdateUserRequest;
 use App\Http\Resources\UserResource;
 use App\Imports\UsersImport;
 use App\Imports\UsersImportSync;
+use App\Models\Counseling;
 use App\Models\Room;
 use App\Models\User;
 use App\Traits\ApiResponder;
@@ -32,12 +33,17 @@ class UserController extends Controller
      * Get all students data
      */
     #[Group('User')]
-    #[ExcludeRouteFromDocs]
     public function getStudents()
     {
         $role = Auth::user()->role;
         $role = $role == UserRole::TEACHER->value ? 'mentor' : 'counselor';
-        $students = User::with(['room', 'mentor', 'lastmoodres'])->whereRole(UserRole::STUDENT->value)->where($role . '_id', Auth::id())->get();
+        $students = User::query()
+    ->addSelect([
+        'last_counseling_id' => Counseling::select('id')
+            ->whereColumn('student_id', 'users.id')
+            ->latest('created_at')
+            ->limit(1),
+    ])->with(['room', 'mentor', 'lastmoodres'])->whereRole(UserRole::STUDENT->value)->where($role . '_id', Auth::id())->get();
 
         return $this->success(UserResource::collection($students));
     }
