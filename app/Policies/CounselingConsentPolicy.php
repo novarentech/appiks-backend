@@ -22,4 +22,12 @@ class CounselingConsentPolicy
     {
         return $consent->counseling->student_id == $user->id;
     }
+
+    /**
+     * Determine whether the student can revoke this consent request.
+     */
+    public function revoke(User $user, CounselingConsent $consent): bool
+    {
+        return $consent->counseling->student_id == $user->id;
+    }
 }

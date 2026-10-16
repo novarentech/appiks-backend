@@ -34,6 +34,7 @@ enum CaseEventType: string
     case CONSENT_REQUESTED            = 'consent_requested';
     case CONSENT_GRANTED              = 'consent_granted';
     case CONSENT_REJECTED             = 'consent_rejected';
+    case CONSENT_REVOKED              = 'consent_revoked';
     case BOOKING_CREATED              = 'booking_created';
     case BOOKING_CONFIRMED            = 'booking_confirmed';
     case BOOKING_RESCHEDULED          = 'booking_rescheduled';
@@ -71,6 +72,7 @@ enum CaseEventType: string
             self::CONSENT_REQUESTED             => 'Persetujuan akses data diminta',
             self::CONSENT_GRANTED               => 'Siswa menyetujui akses data',
             self::CONSENT_REJECTED              => 'Siswa menolak akses data',
+            self::CONSENT_REVOKED               => 'Siswa mencabut persetujuan akses data',
             self::BOOKING_CREATED               => 'Siswa mengajukan jadwal konsultasi',
             self::BOOKING_CONFIRMED             => 'Psikolog mengonfirmasi jadwal',
             self::BOOKING_RESCHEDULED           => 'Psikolog menggeser jadwal',

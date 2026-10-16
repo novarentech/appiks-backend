@@ -90,4 +90,22 @@ class StudentConsentController extends Controller
 
         return $this->success($updatedConsent, 'Digital consent submission recorded successfully.');
     }
+
+    /**
+     * Revoke previously granted digital consent.
+     *
+     * @param CounselingConsent $consent
+     * @param \App\Actions\RevokeConsentAction $action
+     * @return JsonResponse
+     */
+    public function revoke(
+        CounselingConsent $consent,
+        \App\Actions\RevokeConsentAction $action
+    ): JsonResponse {
+        Gate::authorize('revoke', $consent);
+
+        $revokedConsent = $action->execute($consent);
+
+        return $this->success($revokedConsent, 'Persetujuan akses data berhasil dicabut.');
+    }
 }

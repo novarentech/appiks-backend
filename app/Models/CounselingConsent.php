@@ -19,6 +19,7 @@ class CounselingConsent extends Model
         'scopes',
         'granted_at',
         'rejected_at',
+        'revoked_at',
     ];
 
     public function counseling()
@@ -33,6 +34,7 @@ class CounselingConsent extends Model
             'scopes' => 'array',
             'granted_at' => 'datetime',
             'rejected_at' => 'datetime',
+            'revoked_at' => 'datetime',
         ];
     }
 }

@@ -95,6 +95,13 @@ class PsychologistSummaryController extends Controller
             abort(403, 'Akses ditolak. Anda tidak memiliki rujukan aktif untuk sesi ini.');
         }
 
+        // Gate on active digital consent
+        $consent = $counseling->latestConsent;
+        $isGranted = $consent && ($consent->status === ConsentStatus::GRANTED || $consent->status === ConsentStatus::GRANTED->value);
+        if (!$isGranted) {
+            abort(403, 'Akses ditolak. Persetujuan akses data sedang dicabut oleh siswa.');
+        }
+
         // Fetch AI Clinical Summary
         $summary = ClinicalSummary::where('counseling_id', $counseling->id)->first();
         // if (!$summary) {
@@ -112,7 +119,7 @@ class PsychologistSummaryController extends Controller
             'class'          => $student->room->name ?? null,
             'counselor_name' => $student->counselor->name ?? $counseling->counselor->name ?? null,
             'status'         => $booking->status,
-            'priority'       => $counseling->sharing->priority,
+            'priority'       => $counseling->sharing?->priority ?? $counseling->priority ?? 'rendah',
             'deadline_at'    => $booking->deadline_at,
             'reported_at'    => $counseling->created_at,
         ];
@@ -193,6 +200,13 @@ class PsychologistSummaryController extends Controller
 
         if (!$booking) {
             abort(403, 'Akses ditolak. Anda tidak memiliki rujukan aktif untuk sesi ini.');
+        }
+
+        // Gate on active digital consent
+        $consent = $counseling->latestConsent;
+        $isGranted = $consent && ($consent->status === ConsentStatus::GRANTED || $consent->status === ConsentStatus::GRANTED->value);
+        if (!$isGranted) {
+            abort(403, 'Akses ditolak. Persetujuan akses data sedang dicabut oleh siswa.');
         }
 
         app(RecordCaseEvent::class)->handle(

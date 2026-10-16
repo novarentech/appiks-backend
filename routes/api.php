@@ -179,6 +179,7 @@ Route::middleware('auth:api')->group(function () {
         Route::get('counselings/{counseling}/consent', [StudentConsentController::class, 'show']);
         Route::patch('counselings/{counseling}/acknowledge', [CounselingController::class, 'acknowledge']);
         Route::patch('consents/{consent}', [StudentConsentController::class, 'update']);
+        Route::post('consents/{consent}/revoke', [StudentConsentController::class, 'revoke']);
 
         // Booking slot browsing & submission (AND-2)
         Route::get('referrals/{counseling}/available-dates', [StudentBookingController::class, 'availableDates']);

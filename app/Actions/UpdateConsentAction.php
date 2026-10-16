@@ -19,39 +19,35 @@ class UpdateConsentAction
      */
     public function execute(CounselingConsent $consent, bool $isGranted, array $scopes = []): CounselingConsent
     {
-        if ($isGranted) {
-            $consent->status = ConsentStatus::GRANTED;
-            $consent->scopes = $scopes;
-            $consent->granted_at = now();
-            $consent->rejected_at = null;
-            $consent->save();
-        } else {
-            $consent->status = ConsentStatus::REJECTED;
-            $consent->rejected_at = now();
-            $consent->granted_at = null;
-            $consent->scopes = null;
-            $consent->save();
+        if (! $isGranted) {
+            return app(RevokeConsentAction::class)->execute($consent);
         }
 
-        $this->syncCounselingStatus($consent, $isGranted);
+        $consent->status = ConsentStatus::GRANTED;
+        $consent->scopes = $scopes;
+        $consent->granted_at = now();
+        $consent->rejected_at = null;
+        $consent->revoked_at = null;
+        $consent->save();
+
+        $this->syncCounselingStatus($consent, true);
 
         app(RecordCaseEvent::class)->handle(
-            $isGranted ? CaseEventType::CONSENT_GRANTED : CaseEventType::CONSENT_REJECTED,
+            CaseEventType::CONSENT_GRANTED,
             $consent->counseling?->sharing_id,
             $consent->counseling,
-            payload: $isGranted ? [
+            payload: [
                 'scopes'       => $scopes,
                 'scopes_count' => count($scopes),
-            ] : [],
+            ],
         );
 
         return $consent;
     }
 
     /**
-     * Persetujuan data adalah gerbang pertama sebuah rujukan: begitu siswa
-     * menyetujui, ia berpindah ke tahap memilih jadwal; begitu siswa menolak,
-     * rujukannya berhenti.
+     * Persetujuan data adalah gerbang rujukan: begitu siswa menyetujui,
+     * ia berpindah ke tahap memilih jadwal atau melanjutkan jadwal yang sudah ada.
      */
     private function syncCounselingStatus(CounselingConsent $consent, bool $isGranted): void
     {
@@ -62,7 +58,7 @@ class UpdateConsentAction
         }
 
         if (! $isGranted) {
-            $counseling->update(['status' => CounselingStatus::DITOLAK->value]);
+            $counseling->update(['status' => CounselingStatus::MENUNGGU_DISKUSI->value]);
 
             return;
         }
@@ -70,7 +66,24 @@ class UpdateConsentAction
         // Hanya rujukan eksternal yang memerlukan pemilihan jadwal oleh siswa.
         // Konseling internal jadwalnya sudah ditentukan Guru BK sejak awal.
         if ($counseling->type === 'external') {
-            $counseling->update(['status' => CounselingStatus::MENUNGGU_JADWAL->value]);
+            $latestBooking = $counseling->latestBookingSchedule;
+            if ($latestBooking && $latestBooking->status === \App\Enums\BookingStatus::CONFIRMED) {
+                $counseling->update(['status' => CounselingStatus::DIJADWALKAN->value]);
+            } elseif ($latestBooking && $latestBooking->status === \App\Enums\BookingStatus::PENDING) {
+                $counseling->update(['status' => CounselingStatus::MENUNGGU_KONFIRMASI->value]);
+            } else {
+                $counseling->update(['status' => CounselingStatus::MENUNGGU_JADWAL->value]);
+            }
+
+            if ($counseling->sharing) {
+                $counseling->sharing->update([
+                    'status' => $counseling->status === CounselingStatus::DIJADWALKAN
+                        ? \App\Enums\ReportStatus::DIJADWALKAN->value
+                        : \App\Enums\ReportStatus::MENUNGGU_PERSETUJUAN->value,
+                ]);
+            }
+        } else {
+            $counseling->update(['status' => CounselingStatus::DIJADWALKAN->value]);
         }
     }
 }
