@@ -153,40 +153,61 @@ class Counseling extends Model
             return $query;
         }
 
-        $room = trim($room);
+        $cleanRoom = trim(preg_replace('/\s+/', ' ', $room));
         $driver = DB::connection()->getDriverName();
         $concatLevelName = $driver === 'sqlite' ? "level || ' ' || name" : "CONCAT(level, ' ', name)";
         $concatNameLevel = $driver === 'sqlite' ? "name || ' ' || level" : "CONCAT(name, ' ', level)";
 
-        return $query->whereHas('student.room', function (Builder $q) use ($room, $concatLevelName, $concatNameLevel) {
-            $q->where(function (Builder $sq) use ($room, $concatLevelName, $concatNameLevel) {
-                $sq->whereRaw("{$concatNameLevel} LIKE ?", ["%{$room}%"])
-                    ->orWhereRaw("{$concatLevelName} LIKE ?", ["%{$room}%"])
-                    ->orWhere('name', 'like', "%{$room}%")
-                    ->orWhere('level', 'like', "%{$room}%");
+        return $query->whereHas('student.room', function (Builder $q) use ($cleanRoom, $concatLevelName, $concatNameLevel) {
+            $q->where(function (Builder $sq) use ($cleanRoom, $concatLevelName, $concatNameLevel) {
+                $sq->whereRaw("{$concatLevelName} LIKE ?", ["%{$cleanRoom}%"])
+                    ->orWhereRaw("{$concatNameLevel} LIKE ?", ["%{$cleanRoom}%"])
+                    ->orWhere('name', 'like', "%{$cleanRoom}%")
+                    ->orWhere('level', 'like', "%{$cleanRoom}%");
             });
         });
     }
 
-    public function scopeFilterByStatus(Builder $query, ?string $status): Builder
+    public function scopeFilterByStatus(Builder $query, ?string $status = null): Builder
     {
         if (empty($status)) {
             return $query;
         }
 
         $statusLower = strtolower(trim($status));
-        $mappedStatus = match ($statusLower) {
+        $mapped = match ($statusLower) {
             'belum ditinjau', 'belum_ditinjau', 'menunggu tinjauan', 'menunggu_tinjauan', 'pending', 'menunggu' => CounselingStatus::MENUNGGU->value,
+            'menunggu jadwal', 'menunggu_jadwal' => CounselingStatus::MENUNGGU_JADWAL->value,
+            'menunggu konfirmasi', 'menunggu_konfirmasi' => CounselingStatus::MENUNGGU_KONFIRMASI->value,
             'sedang ditangani', 'sedang_ditangani', 'ditinjau' => CounselingStatus::MENUNGGU->value,
             'konseling dijadwalkan', 'konseling_dijadwalkan', 'dijadwalkan' => CounselingStatus::DIJADWALKAN->value,
+            'dijadwal ulang', 'dijadwal_ulang' => CounselingStatus::DIJADWAL_ULANG->value,
             'diselesaikan', 'selesai' => CounselingStatus::SELESAI->value,
             'dibatalkan' => CounselingStatus::DIBATALKAN->value,
             'jadwal ditolak siswa', 'jadwal_ditolak_siswa', 'ditolak' => CounselingStatus::DITOLAK->value,
             'menunggu diskusi', 'menunggu_diskusi' => CounselingStatus::MENUNGGU_DISKUSI->value,
-            default => CounselingStatus::tryFrom($status)?->value ?? $status,
+            default => CounselingStatus::tryFrom($statusLower)?->value ?? $statusLower,
         };
 
-        return $query->where('status', $mappedStatus);
+        return $query->where('status', $mapped);
+    }
+
+    public function scopeFilterBySource(Builder $query, ?string $source = null): Builder
+    {
+        if (empty($source)) {
+            return $query;
+        }
+
+        $sourceLower = strtolower(trim($source));
+        if ($sourceLower === 'all') {
+            return $query;
+        }
+
+        if (in_array($sourceLower, ['student', 'regular', 'nlp_incident'], true)) {
+            return $query->where('source_type', $sourceLower);
+        }
+
+        return $query;
     }
 
     public function scopeFilterByPriority(Builder $query, ?string $priority): Builder

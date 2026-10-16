@@ -42,11 +42,10 @@ class ReportController extends Controller
         $user = Auth::user();
         if ($user->role == UserRole::STUDENT->value) {
             $query = Counseling::where('student_id', $user->id)
-                ->where('source_type', 'student')
                 ->with(['counselor', 'student.room'])
                 ->orderBy('scheduled_at');
         } elseif ($user->role == UserRole::COUNSELOR->value) {
-            $query = Counseling::where('source_type', 'student')
+            $query = Counseling::query()
                 ->with(['counselor', 'student.room'])
                 ->whereIn('student_id', $user->counselored->pluck('id'))
                 ->latest('scheduled_at');
@@ -54,7 +53,10 @@ class ReportController extends Controller
             $query = Counseling::whereRaw('1 = 0');
         }
 
-        $query->filterByRoom($request->input('room'))
+        $source = $request->input('source', 'all');
+
+        $query->filterBySource($source)
+            ->filterByRoom($request->input('room'))
             ->filterByStatus($request->input('status'))
             ->filterByPriority($request->input('priority'))
             ->search($request->input('search'));

@@ -32,9 +32,9 @@ class GetReportRequest extends FormRequest
             'room' => ['nullable', 'string', 'max:50'],
 
             /**
-             * Filter status laporan konseling.
+             * Filter status konseling atau laporan.
              *
-             * @example Belum Ditinjau
+             * @example menunggu
              */
             'status' => ['nullable', 'string', 'max:50'],
 
@@ -43,7 +43,14 @@ class GetReportRequest extends FormRequest
              *
              * @example tinggi
              */
-            'priority' => ['nullable', 'string', Rule::in(['tinggi', 'rendah','sedang'])],
+            'priority' => ['nullable', 'string', Rule::in(['tinggi', 'rendah', 'sedang'])],
+
+            /**
+             * Filter sumber konseling: all, student, atau regular.
+             *
+             * @example all
+             */
+            'source' => ['nullable', 'string', Rule::in(['all', 'student', 'regular'])],
 
             /**
              * Kata kunci pencarian nama siswa, NISN/NIP siswa, atau topik laporan.
