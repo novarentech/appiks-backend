@@ -126,9 +126,16 @@ class DashboardController extends Controller
         $student = User::whereRole(UserRole::STUDENT->value)->whereCounselorId(Auth::id());
         $student_count = $student->count();
         
-        $report_today_count = Report::whereCreatedAt(Carbon::today())->whereIn('user_id', $student->pluck('id')->toArray())->count();
-        $meet_today_count = Report::where('date', Carbon::today())->whereIn('user_id', $student->pluck('id')->toArray())->count();
-        $sharing_today_count = Sharing::whereCreatedAt(Carbon::today())->whereIn('user_id', $student->pluck('id')->toArray())->count();
+        $studentIds = $student->pluck('id')->toArray();
+        $report_today_count = Counseling::where('source_type', 'student')
+            ->whereDate('created_at', Carbon::today())
+            ->whereIn('student_id', $studentIds)
+            ->count();
+        $meet_today_count = Counseling::where('source_type', 'student')
+            ->whereDate('scheduled_at', Carbon::today())
+            ->whereIn('student_id', $studentIds)
+            ->count();
+        $sharing_today_count = Sharing::whereCreatedAt(Carbon::today())->whereIn('user_id', $studentIds)->count();
 
         return $this->success([
             'student_count' => (int) $student_count,

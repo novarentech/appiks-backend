@@ -80,7 +80,12 @@ class User extends Authenticatable implements JWTSubject
 
     public function report()
     {
-        return $this->hasMany(Report::class);
+        return $this->hasMany(Counseling::class, 'student_id');
+    }
+
+    public function counselings()
+    {
+        return $this->hasMany(Counseling::class, 'student_id');
     }
 
     public function getLastMoodAttribute(): ?string

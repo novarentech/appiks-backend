@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Enums\ReportStatus;
+use App\Enums\CounselingStatus;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -19,11 +19,13 @@ class ReportFactory extends Factory
     {
         return [
             'counselor_id' => fake()->randomNumber(),
-            'user_id' => fake()->randomNumber(),
-            'topic' => fake()->sentence(4),
-            'date' => fake()->date(),
-            'time' => fake()->time('H:i'),
-            'status' => fake()->randomElement(ReportStatus::cases()),
+            'student_id' => fake()->randomNumber(),
+            'reason' => fake()->sentence(4),
+            'scheduled_at' => fake()->dateTimeBetween('-1 month', 'now'),
+            'room' => 'Ruang BK 1',
+            'type' => 'internal',
+            'source_type' => 'student',
+            'status' => fake()->randomElement(CounselingStatus::cases())->value,
             'priority' => fake()->randomElement(['tinggi', 'rendah']),
             'notes' => fake()->sentence(10),
             'result' => fake()->sentence(10),

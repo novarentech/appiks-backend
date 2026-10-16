@@ -42,8 +42,13 @@ class CreateReportRequest extends FormRequest
     protected function passedValidation()
     {
         $this->merge([
+            'student_id' => Auth::id(),
             'user_id' => Auth::id(),
             'counselor_id' => Auth::user()->counselor_id,
+            'reason' => $this->topic,
+            'scheduled_at' => $this->date . ' ' . $this->time,
+            'type' => 'internal',
+            'source_type' => 'student',
             'priority' => Auth::user()->last_mood == MoodStatus::ANGRY->value ? 'tinggi' : 'rendah',
         ]);
     }

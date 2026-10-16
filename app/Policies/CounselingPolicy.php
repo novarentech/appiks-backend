@@ -67,4 +67,60 @@ class CounselingPolicy
     {
         return $counseling->counselor_id == $user->id;
     }
+
+    /**
+     * Determine whether the user can view the counseling session.
+     */
+    public function view(User $user, Counseling $counseling): bool
+    {
+        return $counseling->student_id == $user->id
+            || $counseling->counselor_id == $user->id
+            || $counseling->student?->counselor_id == $user->id;
+    }
+
+    /**
+     * Determine whether the user can update the counseling model.
+     */
+    public function update(User $user, Counseling $counseling): bool
+    {
+        return $user->role == UserRole::COUNSELOR->value && $user->school_id == $counseling->student?->school_id;
+    }
+
+    /**
+     * Hanya counselor yang boleh melihat dashboard-data counseling/report.
+     */
+    public function viewGraph(User $authUser): bool
+    {
+        return $authUser->role === UserRole::COUNSELOR->value
+            || $authUser->role === UserRole::SUPER->value
+            || $authUser->role === UserRole::HEADTEACHER->value;
+    }
+
+    /**
+     * Hanya Super Admin yang boleh melihat semua counseling/report milik student tertentu.
+     */
+    public function viewStudentReports(User $authUser, User $targetUser): bool
+    {
+        return $authUser->role === UserRole::SUPER->value
+            && $targetUser->role === UserRole::STUDENT->value;
+    }
+
+    /**
+     * Hanya student yang boleh melihat 2 latest counseling/report miliknya.
+     */
+    public function viewLatest(User $authUser): bool
+    {
+        return $authUser->role === UserRole::STUDENT->value;
+    }
+
+    /**
+     * Determine whether the user can schedule a meeting.
+     */
+    public function scheduleMeeting(User $user, Counseling $counseling): bool
+    {
+        return $user->role === UserRole::SUPER->value
+            || $user->role === UserRole::ADMIN->value
+            || $user->role === UserRole::HEADTEACHER->value
+            || ($user->role === UserRole::COUNSELOR->value && ($counseling->student?->counselor_id == $user->id || $counseling->counselor_id == $user->id));
+    }
 }

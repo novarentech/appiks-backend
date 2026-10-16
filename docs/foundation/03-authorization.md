@@ -1,7 +1,7 @@
 # Authorization
 
-<!-- verified: branch=dev commit=working-tree date=2026-10-10 scope=app/Policies,app/Providers/AppServiceProvider.php,app/Http/Controllers,app/Http/Requests,routes -->
-> **Verified against:** `dev` working tree · 2026-10-10
+<!-- verified: branch=dev commit=working-tree date=2026-10-16 scope=app/Policies,app/Providers/AppServiceProvider.php,app/Http/Controllers,app/Http/Requests,routes -->
+> **Verified against:** `dev` working tree · 2026-10-16
 > **Sources:** [`app/Providers/AppServiceProvider.php`](../../app/Providers/AppServiceProvider.php) · [`app/Policies/`](../../app/Policies/) (11 files) · [`app/Http/Controllers/`](../../app/Http/Controllers/) · [`app/Http/Requests/`](../../app/Http/Requests/)
 
 There is **no permission package** (no spatie/laravel-permission), **no permissions table**, and **no `app/Http/Middleware` directory at all**. Authorization is a single `users.role` string column, enforced in four scattered places.
@@ -73,6 +73,12 @@ Eleven policy classes in [`app/Policies/`](../../app/Policies/). Three are regis
 | | `acknowledge` | caller **is** the counseling's `student_id` |
 | | `manageSchedule` | caller **is** the counseling's `counselor_id` — cancel and re-propose |
 | | `viewTimeline` | **headteacher of the student's school only.** Other roles exist as commented branches, ready to enable |
+| | `view` | caller is the counseling's `student_id`, `counselor_id`, or student's assigned counselor |
+| | `update` | `role == counselor` and same school as student |
+| | `viewGraph` | `counselor`, `super`, or `headteacher` |
+| | `viewStudentReports` | `super` and target is a student |
+| | `viewLatest` | `role == student` |
+| | `scheduleMeeting` | `super`, `admin`, `headteacher`, or assigned counselor |
 | [`CounselingConsentPolicy`](../../app/Policies/CounselingConsentPolicy.php) | `view`, `update` | caller is the consent's counseling `student_id` — **students only, by construction** |
 | [`SharingPolicy`](../../app/Policies/SharingPolicy.php) | `create` | `role == student` |
 | | `view` | caller owns the sharing **or** is the author's `counselor_id` |

@@ -13,7 +13,8 @@ class UpdateRelatedSharingPriority
 
     public function handle(ReportCreated $event): void
     {
-        $affected = Sharing::where('user_id', $event->report->user_id)
+        $studentId = $event->report->student_id ?? $event->report->user_id;
+        $affected = Sharing::where('user_id', $studentId)
             ->whereDate('created_at', now()->toDateString())
             ->get();
 

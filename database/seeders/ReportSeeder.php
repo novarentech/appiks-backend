@@ -28,9 +28,11 @@ class ReportSeeder extends Seeder
             foreach ($dates as $date) {
                 $attrs = Report::factory()->raw([
                     'counselor_id' => $student->counselor_id,
-                    'user_id' => $student->id,
-                    'date' => $date->format('Y-m-d'),
+                    'student_id' => $student->id,
+                    'scheduled_at' => $date->format('Y-m-d H:i:s'),
                     'room' => 'Ruang BK 1',
+                    'type' => 'internal',
+                    'source_type' => 'student',
                     'created_at' => $date->format('Y-m-d H:i:s'),
                     'updated_at' => $date->format('Y-m-d H:i:s'),
                 ]);

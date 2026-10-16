@@ -5,7 +5,7 @@ namespace App\Console\Commands;
 use App\Actions\RecordCaseEvent;
 use App\Enums\CaseEventType;
 use App\Enums\ReportStatus;
-use App\Models\Report;
+use App\Models\Counseling;
 use App\Models\Sharing;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
@@ -47,7 +47,7 @@ class ClearCutdown extends Command
             }
 
             Sharing::where('cutdown_for_report', '<', now())->update(['cutdown_for_report' => null]);
-            Report::where('cutdown_for_report', '<', now())->update(['cutdown_for_report' => null]);
+            Counseling::where('cutdown_at', '<', now())->update(['cutdown_at' => null]);
             DB::commit();
             $this->info('Cutdown cleared successfully ('.$elapsed->count().' SLA terlampaui dicatat)');
         } catch (\Exception $e) {

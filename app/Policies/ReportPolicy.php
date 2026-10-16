@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Enums\MoodStatus;
 use App\Enums\UserRole;
+use App\Models\Counseling;
 use App\Models\Report;
 use App\Models\User;
 
@@ -12,9 +13,11 @@ class ReportPolicy
     /**
      * Determine whether the user can view any models.
      */
-    public function view(User $user, Report $report): bool
+    public function view(User $user, Counseling|Report $report): bool
     {
-        return $report->user_id == $user->id || $report->user->counselor_id == $user->id;
+        $studentId = $report->student_id ?? $report->user_id;
+        $counselorId = $report->counselor_id ?? $report->user?->counselor_id;
+        return $studentId == $user->id || $counselorId == $user->id;
     }
 
     /**
@@ -28,9 +31,10 @@ class ReportPolicy
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, Report $report): bool
+    public function update(User $user, Counseling|Report $report): bool
     {
-        return $user->role == UserRole::COUNSELOR->value && $user->school_id == $report->user->school_id;
+        $student = $report->student ?? $report->user;
+        return $user->role == UserRole::COUNSELOR->value && $user->school_id == $student?->school_id;
     }
 
     /**
@@ -63,11 +67,12 @@ class ReportPolicy
     /**
      * Determine whether the user can schedule a meeting from the report.
      */
-    public function scheduleMeeting(User $user, Report $report): bool
+    public function scheduleMeeting(User $user, Counseling|Report $report): bool
     {
+        $student = $report->student ?? $report->user;
         return $user->role === UserRole::SUPER->value
             || $user->role === UserRole::ADMIN->value
             || $user->role === UserRole::HEADTEACHER->value
-            || ($user->role === UserRole::COUNSELOR->value && $report->user->counselor_id == $user->id);
+            || ($user->role === UserRole::COUNSELOR->value && ($student?->counselor_id == $user->id || $report->counselor_id == $user->id));
     }
 }

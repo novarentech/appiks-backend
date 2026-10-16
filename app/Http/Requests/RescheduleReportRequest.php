@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\CounselingStatus;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
@@ -13,7 +14,8 @@ class RescheduleReportRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return Gate::allows('update', $this->report) && $this->report->status == 'disetujui';
+        $status = $this->report?->status instanceof CounselingStatus ? $this->report->status->value : $this->report?->status;
+        return Gate::allows('update', $this->report) && in_array($status, ['menunggu', 'dijadwalkan', 'disetujui']);
     }
 
     /**
@@ -38,6 +40,9 @@ class RescheduleReportRequest extends FormRequest
 
     protected function passedValidation()
     {
-        $this->merge(['status' => 'dijadwalkan']);
+        $this->merge([
+            'status' => CounselingStatus::DIJADWAL_ULANG->value,
+            'scheduled_at' => $this->date . ' ' . $this->time,
+        ]);
     }
 }

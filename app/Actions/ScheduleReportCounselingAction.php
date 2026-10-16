@@ -6,7 +6,6 @@ use App\Enums\CaseEventType;
 use App\Enums\CounselingStatus;
 use App\Events\CounselingScheduled;
 use App\Models\Counseling;
-use App\Models\Report;
 use Illuminate\Support\Facades\Auth;
 
 class ScheduleReportCounselingAction
@@ -14,33 +13,28 @@ class ScheduleReportCounselingAction
     /**
      * Execute the action to schedule a counseling session from a report.
      */
-    public function handle(Report $report, array $validated): Counseling
+    public function handle(Counseling $report, array $validated): Counseling
     {
         $scheduledAt = $validated['proposed_date'] . ' ' . $validated['proposed_time'];
 
-        $counseling = Counseling::create([
-            'student_id' => $report->user_id,
-            'counselor_id' => Auth::id(),
-            'room' => $validated['room'] ?? null,
-            'notes' => $validated['notes'] ?? null,
-            'reason' => 'Konseling rujukan laporan insiden #' . $report->id,
-            'type' => 'internal',
-            'source_type' => 'nlp_incident',
-            'report_id' => $report->id,
+        $report->update([
+            'counselor_id' => Auth::id() ?? $report->counselor_id,
+            'room' => $validated['room'] ?? $report->room,
+            'notes' => $validated['notes'] ?? $report->notes,
             'status' => CounselingStatus::MENUNGGU->value,
             'scheduled_at' => $scheduledAt,
         ]);
 
         app(RecordCaseEvent::class)->handle(
             CaseEventType::COUNSELING_SCHEDULE_PROPOSED,
-            $counseling->sharing_id,
-            $counseling,
+            $report->sharing_id,
+            $report,
             payload: ['scheduled_at' => $scheduledAt],
         );
 
         // Dispatch event to handle decoupled side-effects
-        CounselingScheduled::dispatch($counseling);
+        CounselingScheduled::dispatch($report);
 
-        return $counseling;
+        return $report;
     }
 }

@@ -34,15 +34,8 @@ class StoreCounselingLogAction
             'status' => CounselingStatus::SELESAI->value,
             'resolution' => $validated['resolution_status'],
             'method' => $validated['session_mode'],
+            'result' => $counseling->result ?? ('Konseling selesai dengan resolusi: ' . $validated['resolution_status']),
         ]);
-
-        // If this counseling session was linked to a high-risk report, close the report too
-        if ($counseling->report_id) {
-            $counseling->report->update([
-                'status' => ReportStatus::SELESAI->value,
-                'result' => 'Konseling selesai dengan resolusi: ' . $validated['resolution_status'],
-            ]);
-        }
 
         app(RecordCaseEvent::class)->handle(
             CaseEventType::COUNSELING_LOG_STORED,

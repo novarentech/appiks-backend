@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\CounselingStatus;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
 
@@ -12,7 +13,8 @@ class CloseReportRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return Gate::allows('update', $this->report) && in_array($this->report->status, ['disetujui', 'dijadwalkan']);
+        $status = $this->report?->status instanceof CounselingStatus ? $this->report->status->value : $this->report?->status;
+        return Gate::allows('update', $this->report) && in_array($status, ['menunggu', 'dijadwalkan', 'dijadwal_ulang', 'disetujui']);
     }
 
     /**
